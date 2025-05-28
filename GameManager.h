@@ -48,7 +48,7 @@ private:
     void updateBoard();
     void recordAction(int playerId, int tankId, ActionRequest action, bool success);
     void printBoard() const;
-
+    bool readBoard(const std::string& filename);
 
 };
 

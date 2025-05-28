@@ -3,6 +3,9 @@
 #include <iostream>
 #include <bits/algorithmfwd.h>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <regex>
 
 GameManager::GameManager(Board& board,
                         std::shared_ptr<StrategyManager> smP1,
@@ -397,5 +400,75 @@ void GameManager::printBoard() const {
     for (const std::string& line : boardLines) {
         std::cout << line << "\n";
     }
+}
+
+bool GameManager::readBoard(const std::string& filename) {
+    std::ifstream inputFile(filename);
+    if (!inputFile) {
+        std::cerr << "Error: Cannot open input file: " << filename << std::endl;
+        return false;
+    }
+
+    std::string line;
+    // 1. Map name/description (ignore)
+    std::getline(inputFile, line);
+
+    // 2. MaxSteps
+    int maxSteps = 0, numShells = 0, rows = 0, cols = 0;
+    std::regex reNum(R"(=\s*(\d+))");
+    for (int i = 0; i < 4; ++i) {
+        if (!std::getline(inputFile, line)) {
+            std::cerr << "Error: Missing header line " << (i+2) << std::endl;
+            return false;
+        }
+        std::smatch m;
+        if (i == 0 && std::regex_search(line, m, reNum)) maxSteps = std::stoi(m[1]);
+        if (i == 1 && std::regex_search(line, m, reNum)) numShells = std::stoi(m[1]);
+        if (i == 2 && std::regex_search(line, m, reNum)) rows = std::stoi(m[1]);
+        if (i == 3 && std::regex_search(line, m, reNum)) cols = std::stoi(m[1]);
+    }
+    if (rows <= 0 || cols <= 0) {
+        std::cerr << "Error: Invalid board dimensions." << std::endl;
+        return false;
+    }
+    // Resize board
+    board = Board(cols, rows);
+    player1Tanks.clear();
+    player2Tanks.clear();
+
+    int row = 0;
+    while (std::getline(inputFile, line) && row < rows) {
+        // Fill missing columns with spaces
+        if ((int)line.size() < cols) line += std::string(cols - line.size(), ' ');
+        for (int col = 0; col < cols; ++col) {
+            char ch = line[col];
+            Tile& tile = board.getTile(col, row);
+            if (ch == '#') {
+                board.placeWall(Position(col, row));
+            } else if (ch == '@') {
+                board.placeMine(Position(col, row));
+            } else if (ch >= '0' && ch <= '9') {
+                int playerId = (ch == '1' || ch == '0') ? 1 : 2;
+                int tankIdx = (playerId == 1) ? player1Tanks.size() : player2Tanks.size();
+                if (playerId == 1) {
+                    player1Tanks.emplace_back(1, tankIdx, Position(col, row), Direction::L);
+                    tile.setType(TileType::TANK1);
+                } else {
+                    player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R);
+                    tile.setType(TileType::TANK2);
+                }
+            }
+            // else: treat as empty
+        }
+        ++row;
+    }
+    // Fill missing rows with empty lines
+    while (row < rows) {
+        for (int col = 0; col < cols; ++col) {
+            board.getTile(col, row).setType(TileType::EMPTY);
+        }
+        ++row;
+    }
+    return true;
 }
 

@@ -1,8 +1,8 @@
 #pragma once
-#include "common/TankAlgorithm.h"
+#include "TankAlgorithm.h"
 #include "MyBattleInfo.h"
 #include <memory>
-#include <optional>
+//#include <optional>
 
 class MyTankAlgorithm : public TankAlgorithm {
     int round = 0;

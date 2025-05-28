@@ -4,7 +4,6 @@
 #include "common/TankAlgorithm.h"
 #include "common/SatelliteView.h"
 #include "MyBattleInfo.h"
-#include <memory>
 #include <vector>
 #include <string>
 #include <unordered_map>
