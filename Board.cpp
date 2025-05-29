@@ -110,3 +110,21 @@ void Board::print() const {
     // Bottom border
     std::cout << "+" << std::string(width, '-') << "+" << std::endl;
 }
+
+std::vector<std::string> Board::toString() const {
+    std::vector<std::string> lines;
+    for (const auto& row : tiles) {
+        std::string line;
+        for (const auto& tile : row) {
+            switch (tile.getType()) {
+                case TileType::WALL: line += '#'; break;
+                case TileType::MINE: line += '@'; break;
+                case TileType::TANK1: line += '1'; break;
+                case TileType::TANK2: line += '2'; break;
+                default: line += ' ';
+            }
+        }
+        lines.push_back(line);
+    }
+    return lines;
+}

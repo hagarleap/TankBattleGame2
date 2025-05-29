@@ -1,64 +1,175 @@
 #include "GameManager.h"
-#include "TestAlgorithm.h"
+#include "GameSatelliteView.h"
 #include <iostream>
-#include <bits/algorithmfwd.h>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <regex>
+#include <memory>
 
 GameManager::GameManager(Board& board,
-                        std::shared_ptr<StrategyManager> smP1,
-                        std::shared_ptr<StrategyManager> smP2,
-                        std::vector<Tank>& player1Tanks,
-                        std::vector<Tank>& player2Tanks,
-                        bool verbose)
-    : board(board), strategyP1(smP1), strategyP2(smP2),  player1Tanks(player1Tanks), player2Tanks(player2Tanks), verbose(verbose) {}
+    const PlayerFactory& playerFactory1,
+    const PlayerFactory& playerFactory2,
+    const TankAlgorithmFactory& algoFactory1,
+    const TankAlgorithmFactory& algoFactory2,
+    bool verbose)
+    : board(board), verbose(verbose) {
+    // Tanks will be initialized in readBoard
+    // Players and algorithms will be created after tanks are known
+}
+
+// Helper struct to track tank status for output
+struct TankOutputStatus {
+    bool alive = true;
+    bool killedThisStep = false;
+    bool ignored = false;
+    std::string lastAction;
+};
 
 void GameManager::run(int maxSteps) {
+    // Prepare output status for all tanks in board order
+    std::vector<TankOutputStatus> tankStatus;
+    for (const Tank& t : player1Tanks) tankStatus.push_back({true, false, false, ""});
+    for (const Tank& t : player2Tanks) tankStatus.push_back({true, false, false, ""});
+    std::vector<std::string> outputLines;
+    int tanksTotal = (int)player1Tanks.size() + (int)player2Tanks.size();
+    int tanksP1 = (int)player1Tanks.size();
+    int tanksP2 = (int)player2Tanks.size();
+    int round = 0;
+    int noShellsCounter = 0;
+    const int NO_SHELLS_TIE_STEPS = 40;
     while (!gameOver && stepCounter < maxSteps*2) {
-
         moveShells();
         checkCollisions();
-        // Game moves by shell steps
-        if (stepCounter%2 == 0){
+        if (stepCounter%2 == 0) {
+            // --- Output logging for this round ---
+            std::vector<std::string> actionsThisRound;
+            // Player 1 tanks
+            for (size_t i = 0; i < player1Tanks.size(); ++i) {
+                Tank& tank = player1Tanks[i];
+                TankOutputStatus& status = tankStatus[i];
+                std::string actionStr;
+                if (!status.alive) {
+                    actionStr = "killed";
+                } else {
+                    auto& algo = tankAlgos1[i];
+                    ActionRequest action = algo->getAction();
+                    actionStr = to_string(action);
+                    if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
+                        actionStr += " (ignored)";
+                        status.ignored = true;
+                    }
+                    if (!tank.isAlive()) {
+                        actionStr += status.ignored ? " (killed)" : " (killed)";
+                        status.alive = false;
+                        status.killedThisStep = true;
+                    } else {
+                        status.killedThisStep = false;
+                    }
+                }
+                actionsThisRound.push_back(actionStr);
+                status.lastAction = actionStr;
+                status.ignored = false;
+            }
+            // Player 2 tanks
+            for (size_t i = 0; i < player2Tanks.size(); ++i) {
+                Tank& tank = player2Tanks[i];
+                TankOutputStatus& status = tankStatus[tanksP1 + i];
+                std::string actionStr;
+                if (!status.alive) {
+                    actionStr = "killed";
+                } else {
+                    auto& algo = tankAlgos2[i];
+                    ActionRequest action = algo->getAction();
+                    actionStr = to_string(action);
+                    if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
+                        actionStr += " (ignored)";
+                        status.ignored = true;
+                    }
+                    if (!tank.isAlive()) {
+                        actionStr += status.ignored ? " (killed)" : " (killed)";
+                        status.alive = false;
+                        status.killedThisStep = true;
+                    } else {
+                        status.killedThisStep = false;
+                    }
+                }
+                actionsThisRound.push_back(actionStr);
+                status.lastAction = actionStr;
+                status.ignored = false;
+            }
+            // Join actions for this round
+            std::ostringstream oss;
+            for (size_t i = 0; i < actionsThisRound.size(); ++i) {
+                if (i > 0) oss << ", ";
+                oss << actionsThisRound[i];
+            }
+            outputLines.push_back(oss.str());
+            // --- End output logging for this round ---
             if (verbose) {
-                std::cout << "Step " << stepCounter/2 << std::endl;
+                std::cout << "Step " << round << std::endl;
                 printBoard();
                 std::cout << "----------------------" << std::endl;
-            }            
+            }
             tick();
             checkCollisions();
+            ++round;
         }
         updateBoard();
-
         // Check win/tie conditions 
         bool anyAlive1 = std::any_of(player1Tanks.begin(), player1Tanks.end(), [](const Tank& t){ return t.isAlive(); });
         bool anyAlive2 = std::any_of(player2Tanks.begin(), player2Tanks.end(), [](const Tank& t){ return t.isAlive(); });
-        
+        bool allShellsUsed = std::all_of(player1Tanks.begin(), player1Tanks.end(), [](const Tank& t){ return t.getShellsLeft() == 0 || !t.isAlive(); }) &&
+                             std::all_of(player2Tanks.begin(), player2Tanks.end(), [](const Tank& t){ return t.getShellsLeft() == 0 || !t.isAlive(); });
+        if (allShellsUsed) {
+            ++noShellsCounter;
+        } else {
+            noShellsCounter = 0;
+        }
         if (!anyAlive1 && !anyAlive2) {
             gameOver = true;
-            resultMessage = "Tie: Both tanks destroyed.";
+            resultMessage = "Tie, both players have zero tanks";
         } else if (!anyAlive1) {
             gameOver = true;
-            resultMessage = "Player 2 wins!";
+            int alive2 = std::count_if(player2Tanks.begin(), player2Tanks.end(), [](const Tank& t){ return t.isAlive(); });
+            resultMessage = "Player 2 won with " + std::to_string(alive2) + " tanks still alive";
         } else if (!anyAlive2) {
             gameOver = true;
-            resultMessage = "Player 1 wins!";
+            int alive1 = std::count_if(player1Tanks.begin(), player1Tanks.end(), [](const Tank& t){ return t.isAlive(); });
+            resultMessage = "Player 1 won with " + std::to_string(alive1) + " tanks still alive";
+        } else if (noShellsCounter >= NO_SHELLS_TIE_STEPS) {
+            gameOver = true;
+            resultMessage = "Tie, both players have zero shells for " + std::to_string(NO_SHELLS_TIE_STEPS) + " steps";
         }
         ++stepCounter;
     }
-    if (!gameOver){resultMessage = "Tie: Max steps reached.";}
+    if (!gameOver) {
+        int alive1 = std::count_if(player1Tanks.begin(), player1Tanks.end(), [](const Tank& t){ return t.isAlive(); });
+        int alive2 = std::count_if(player2Tanks.begin(), player2Tanks.end(), [](const Tank& t){ return t.isAlive(); });
+        resultMessage = "Tie, reached max steps = " + std::to_string(maxSteps) + ", player 1 has " + std::to_string(alive1) + " tanks, player 2 has " + std::to_string(alive2) + " tanks";
+    }
+    // Write output file
+    std::ofstream out("game_output.txt");
+    for (const auto& line : outputLines) out << line << "\n";
+    out << resultMessage << "\n";
 }
 
 void GameManager::tick() {
-    for (auto& tank : player1Tanks) {
+    // Player 1
+    for (size_t i = 0; i < player1Tanks.size(); ++i) {
+        Tank& tank = player1Tanks[i];
         if (!tank.isAlive()) continue;
-
-        ActionRequest action = strategyP1->getAction(tank.getTankId(), tank, board, shells);
+        auto& algo = tankAlgos1[i];
+        ActionRequest action = algo->getAction();
         bool success = true;
+        if (action == ActionRequest::GetBattleInfo) {
+            GameSatelliteView satelliteView(board, player1Tanks, player2Tanks, shells);
+            player1->updateTankWithBattleInfo(*algo, satelliteView);
+            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+            tank.tickCooldown();
+            continue;
+        }
 
-        
         if (tank.isWaitingForBackward()) {
             if (action == ActionRequest::MoveForward) {
                 tank.cancelBackward(); 
@@ -102,12 +213,20 @@ void GameManager::tick() {
             tank.resetBackwardState();
         }
     }
-
-    for (auto& tank : player2Tanks) {
+    // Player 2
+    for (size_t i = 0; i < player2Tanks.size(); ++i) {
+        Tank& tank = player2Tanks[i];
         if (!tank.isAlive()) continue;
-
-        ActionRequest action = strategyP2->getAction(tank.getTankId(), tank, board, shells);
+        auto& algo = tankAlgos2[i];
+        ActionRequest action = algo->getAction();
         bool success = true;
+        if (action == ActionRequest::GetBattleInfo) {
+            GameSatelliteView satelliteView(board, player1Tanks, player2Tanks, shells);
+            player2->updateTankWithBattleInfo(*algo, satelliteView);
+            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+            tank.tickCooldown();
+            continue;
+        }
 
         if (tank.isWaitingForBackward()) {
             if (action == ActionRequest::MoveForward) {
@@ -283,9 +402,6 @@ void GameManager::checkCollisions() {
         if (currTile.isWall()) {
             currTile.hitWall();
             shellsToRemove.push_back(i);
-            // NEW:
-            if (strategyP1) strategyP1->notifyMapChangedAll();
-            if (strategyP2) strategyP2->notifyMapChangedAll();
             continue;
         }
 
@@ -403,22 +519,27 @@ void GameManager::printBoard() const {
 }
 
 bool GameManager::readBoard(const std::string& filename) {
+    std::ofstream errorFile("input_errors.txt");
+    if (!errorFile) {
+        std::cerr << "Error: Cannot open input_errors.txt for writing." << std::endl;
+        return false;
+    }
     std::ifstream inputFile(filename);
     if (!inputFile) {
-        std::cerr << "Error: Cannot open input file: " << filename << std::endl;
+        errorFile << "Error: Cannot open input file: " << filename << std::endl;
         return false;
     }
 
     std::string line;
-    // 1. Map name/description (ignore)
-    std::getline(inputFile, line);
-
-    // 2. MaxSteps
+    if (!std::getline(inputFile, line)) {
+        errorFile << "Error: Missing map name/description line." << std::endl;
+        return false;
+    }
     int maxSteps = 0, numShells = 0, rows = 0, cols = 0;
     std::regex reNum(R"(=\s*(\d+))");
     for (int i = 0; i < 4; ++i) {
         if (!std::getline(inputFile, line)) {
-            std::cerr << "Error: Missing header line " << (i+2) << std::endl;
+            errorFile << "Error: Missing header line " << (i+2) << std::endl;
             return false;
         }
         std::smatch m;
@@ -428,17 +549,15 @@ bool GameManager::readBoard(const std::string& filename) {
         if (i == 3 && std::regex_search(line, m, reNum)) cols = std::stoi(m[1]);
     }
     if (rows <= 0 || cols <= 0) {
-        std::cerr << "Error: Invalid board dimensions." << std::endl;
+        errorFile << "Error: Invalid board dimensions (rows=" << rows << ", cols=" << cols << ")." << std::endl;
         return false;
     }
-    // Resize board
     board = Board(cols, rows);
     player1Tanks.clear();
     player2Tanks.clear();
-
     int row = 0;
+    bool errorFound = false;
     while (std::getline(inputFile, line) && row < rows) {
-        // Fill missing columns with spaces
         if ((int)line.size() < cols) line += std::string(cols - line.size(), ' ');
         for (int col = 0; col < cols; ++col) {
             char ch = line[col];
@@ -457,18 +576,28 @@ bool GameManager::readBoard(const std::string& filename) {
                     player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R);
                     tile.setType(TileType::TANK2);
                 }
+            } else if (ch != ' ' && ch != '\r' && ch != '\n') {
+                errorFile << "Error: Unrecognized character '" << ch << "' at (" << row << "," << col << ")." << std::endl;
+                errorFound = true;
             }
-            // else: treat as empty
         }
         ++row;
     }
-    // Fill missing rows with empty lines
-    while (row < rows) {
-        for (int col = 0; col < cols; ++col) {
-            board.getTile(col, row).setType(TileType::EMPTY);
-        }
-        ++row;
+    if (row < rows) {
+        errorFile << "Error: Missing board rows. Expected " << rows << ", got " << row << "." << std::endl;
+        return false;
     }
+    // Check for too many tanks (optional, if spec requires)
+    // if (player1Tanks.size() > MAX_TANKS) { errorFile << ... }
+    // if (player2Tanks.size() > MAX_TANKS) { errorFile << ... }
+    // Do NOT treat missing tanks as an error; run() will handle immediate loss
+    if (errorFound) return false;
+    // After tanks are known, create players and tank algorithms
+    // (Assume factories are stored as members or passed in)
+    // player1 = playerFactory1.create(1, ...); // fill in args
+    // player2 = playerFactory2.create(2, ...);
+    // for each tank: tankAlgos1.push_back(algoFactory1.create(...));
+    // for each tank: tankAlgos2.push_back(algoFactory2.create(...));
     return true;
 }
 

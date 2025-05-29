@@ -25,6 +25,7 @@ public:
     const Tile& getTile(Position pos) const;
 
     void print() const;
+    std::vector<std::string> toString() const;
 
 private:
     int width;

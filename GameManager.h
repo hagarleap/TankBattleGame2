@@ -5,39 +5,40 @@
 #include "Tank.h"
 #include "Shell.h"
 #include "common/ActionRequest.h"
-#include "StrategyManager.h"
+#include "common/Player.h"
+#include "common/PlayerFactory.h"
+#include "common/TankAlgorithm.h"
+#include "common/TankAlgorithmFactory.h"
 #include <vector>
 #include <string>
 #include <fstream>
+#include <memory>
 
 class GameManager {
 public:
     GameManager(Board& board,
-                std::shared_ptr<StrategyManager> smP1,
-                std::shared_ptr<StrategyManager> smP2,
-                std::vector<Tank>& player1Tanks,
-                std::vector<Tank>& player2Tanks,
-                bool verbose = false
-                );
+                const PlayerFactory& playerFactory1,
+                const PlayerFactory& playerFactory2,
+                const TankAlgorithmFactory& algoFactory1,
+                const TankAlgorithmFactory& algoFactory2,
+                bool verbose = false);
 
     void run(int maxSteps = 1000);
     void writeLog(const std::string& outputFile) const;
     std::string getResultMessage() const;
 
-
 private:
     Board& board;
-
-    std::shared_ptr<StrategyManager> strategyP1;
-    std::shared_ptr<StrategyManager> strategyP2;
-    std::vector<Tank>& player1Tanks;
-    std::vector<Tank>& player2Tanks;
+    std::unique_ptr<Player> player1;
+    std::unique_ptr<Player> player2;
+    std::vector<std::unique_ptr<TankAlgorithm>> tankAlgos1;
+    std::vector<std::unique_ptr<TankAlgorithm>> tankAlgos2;
+    std::vector<Tank> player1Tanks;
+    std::vector<Tank> player2Tanks;
     std::vector<Shell> shells;
-    
     bool verbose = false;
     int stepCounter = 0;
     std::vector<std::string> log;
-
     bool gameOver = false;
     std::string resultMessage;
 
@@ -49,7 +50,6 @@ private:
     void recordAction(int playerId, int tankId, ActionRequest action, bool success);
     void printBoard() const;
     bool readBoard(const std::string& filename);
-
 };
 
 #endif // GAMEMANAGER_H

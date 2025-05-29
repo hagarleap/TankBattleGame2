@@ -1,20 +1,16 @@
-#pragma once
+#include "MyBattleInfo.h"
 
-#include "common/BattleInfo.h"
-#include <vector>
-#include <string>
+MyBattleInfo::MyBattleInfo(const std::vector<std::string>& snapshot, size_t x, size_t y)
+    : snapshot(snapshot), tankX(x), tankY(y) {}
 
-class MyBattleInfo : public BattleInfo {
-    std::vector<std::string> snapshot;
-    size_t tankX;
-    size_t tankY;
+const std::vector<std::string>& MyBattleInfo::getSnapshot() const {
+    return snapshot;
+}
 
-public:
-    MyBattleInfo(const std::vector<std::string>& snapshot, size_t x, size_t y);
+size_t MyBattleInfo::getX() const {
+    return tankX;
+}
 
-    // Getters
-    const std::vector<std::string>& getSnapshot() const;
-    size_t getX() const;
-    size_t getY() const;
-
-};
+size_t MyBattleInfo::getY() const {
+    return tankY;
+}
