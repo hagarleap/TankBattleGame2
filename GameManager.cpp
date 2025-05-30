@@ -163,7 +163,10 @@ void GameManager::tick() {
         ActionRequest action = algo->getAction();
         bool success = true;
         if (action == ActionRequest::GetBattleInfo) {
-            GameSatelliteView satelliteView(board, player1Tanks, player2Tanks, shells);
+            GameSatelliteView satelliteView(
+                board, player1Tanks, player2Tanks, shells,
+                tank.getPosition().x, tank.getPosition().y, tank.getPlayerId()
+            );
             player1->updateTankWithBattleInfo(*algo, satelliteView);
             recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
             tank.tickCooldown();
@@ -221,7 +224,10 @@ void GameManager::tick() {
         ActionRequest action = algo->getAction();
         bool success = true;
         if (action == ActionRequest::GetBattleInfo) {
-            GameSatelliteView satelliteView(board, player1Tanks, player2Tanks, shells);
+            GameSatelliteView satelliteView(
+                board, player1Tanks, player2Tanks, shells,
+                tank.getPosition().x, tank.getPosition().y, tank.getPlayerId()
+            );
             player2->updateTankWithBattleInfo(*algo, satelliteView);
             recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
             tank.tickCooldown();
