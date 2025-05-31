@@ -1,15 +1,14 @@
 #pragma once
 #include "common/BattleInfo.h"
-#include <vector>
-#include <string>
+#include "common/SatelliteView.h"
 
 class MyBattleInfo : public BattleInfo {
-    std::vector<std::string> snapshot;
-    size_t tankX;
-    size_t tankY;
+    size_t boardWidth;
+    size_t boardHeight;
+    const SatelliteView* satelliteView;
 public:
-    MyBattleInfo(const std::vector<std::string>& snapshot, size_t x, size_t y);
-    const std::vector<std::string>& getSnapshot() const;
-    size_t getX() const;
-    size_t getY() const;
+    MyBattleInfo(size_t width, size_t height, const SatelliteView* view);
+    size_t getBoardWidth() const;
+    size_t getBoardHeight() const;
+    const SatelliteView* getSatelliteView() const;
 };
