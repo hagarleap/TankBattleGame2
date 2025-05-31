@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string inputFile = argv[1];
-    GameManager game(MyPlayerFactory{}, MyTankAlgorithmFactory{});
+    GameManager game(MyPlayerFactory{}, MyTankAlgorithmFactory{}, false);
     game.readBoard(inputFile);
 
     std::cout << "✅ Starting game loop" << std::endl;
@@ -24,6 +24,6 @@ int main(int argc, char* argv[]) {
     game.writeLog("output_" + inputFile);
 
     std::cout << "✅ GameManager finished running" << std::endl;
-    std::cout << manager.getResultMessage() << std::endl;
+    std::cout << game.getResultMessage() << std::endl;
     return 0;
 }

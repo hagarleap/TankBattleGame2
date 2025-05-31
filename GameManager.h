@@ -6,9 +6,9 @@
 #include "Shell.h"
 #include "common/ActionRequest.h"
 #include "common/Player.h"
-#include "common/PlayerFactory.h"
+#include "MyPlayerFactory.h"
 #include "common/TankAlgorithm.h"
-#include "common/TankAlgorithmFactory.h"
+#include "MyTankAlgorithmFactory.h"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -16,19 +16,19 @@
 
 class GameManager {
 public:
-    GameManager(Board& board,
-                const PlayerFactory& playerFactory1,
-                const PlayerFactory& playerFactory2,
-                const TankAlgorithmFactory& algoFactory1,
-                const TankAlgorithmFactory& algoFactory2,
+    GameManager(const MyPlayerFactory& playerFactory,
+                const MyTankAlgorithmFactory& algoFactory,
                 bool verbose = false);
 
     void run(int maxSteps = 1000);
     void writeLog(const std::string& outputFile) const;
     std::string getResultMessage() const;
+    bool readBoard(const std::string& filename);
 
 private:
     Board& board;
+    const MyPlayerFactory& playerFactory;
+    const MyTankAlgorithmFactory& algoFactory;
     std::unique_ptr<Player> player1;
     std::unique_ptr<Player> player2;
     std::vector<std::unique_ptr<TankAlgorithm>> tankAlgos1;
@@ -49,7 +49,7 @@ private:
     void updateBoard();
     void recordAction(int playerId, int tankId, ActionRequest action, bool success);
     void printBoard() const;
-    bool readBoard(const std::string& filename);
+
 };
 
 #endif // GAMEMANAGER_H

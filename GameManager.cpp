@@ -7,13 +7,10 @@
 #include <regex>
 #include <memory>
 
-GameManager::GameManager(Board& board,
-    const PlayerFactory& playerFactory1,
-    const PlayerFactory& playerFactory2,
-    const TankAlgorithmFactory& algoFactory1,
-    const TankAlgorithmFactory& algoFactory2,
+GameManager::GameManager(const MyPlayerFactory& playerFactory,
+                        const MyTankAlgorithmFactory& algoFactory,
     bool verbose)
-    : board(board), verbose(verbose) {
+    : board(board), playerFactory(playerFactory), algoFactory(algoFactory), verbose(verbose) {
     // Tanks will be initialized in readBoard
     // Players and algorithms will be created after tanks are known
 }
@@ -599,11 +596,20 @@ bool GameManager::readBoard(const std::string& filename) {
     // Do NOT treat missing tanks as an error; run() will handle immediate loss
     if (errorFound) return false;
     // After tanks are known, create players and tank algorithms
-    // (Assume factories are stored as members or passed in)
-    // player1 = playerFactory1.create(1, ...); // fill in args
-    // player2 = playerFactory2.create(2, ...);
-    // for each tank: tankAlgos1.push_back(algoFactory1.create(...));
-    // for each tank: tankAlgos2.push_back(algoFactory2.create(...));
+    size_t p1x = player1Tanks.empty() ? 0 : player1Tanks[0].getPosition().x;
+    size_t p1y = player1Tanks.empty() ? 0 : player1Tanks[0].getPosition().y;
+    size_t p2x = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().x;
+    size_t p2y = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().y;
+    player1 = playerFactory.create(1, p1x, p1y, maxSteps, numShells);
+    player2 = playerFactory.create(2, p2x, p2y, maxSteps, numShells);
+    tankAlgos1.clear();
+    tankAlgos2.clear();
+    for (const Tank& tank : player1Tanks) {
+        tankAlgos1.push_back(algoFactory.create(1, tank.getTankId()));
+    }
+    for (const Tank& tank : player2Tanks) {
+        tankAlgos2.push_back(algoFactory.create(2, tank.getTankId()));
+    }
     return true;
 }
 
