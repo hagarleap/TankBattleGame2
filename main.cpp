@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string inputFile = argv[1];
-    GameManager game(MyPlayerFactory{}, MyTankAlgorithmFactory{}, false);
+    GameManager game(MyPlayerFactory{}, MyTankAlgorithmFactory{}, true);
     game.readBoard(inputFile);
 
     std::cout << "✅ Starting game loop" << std::endl;

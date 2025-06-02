@@ -15,10 +15,7 @@ public:
 private:
     int stepCounter = 0;
     std::queue<ActionRequest> plannedActions;
-    int boardWidth = 0, boardHeight = 0;
-    int myId = 0;
-    int myX = 0, myY = 0;
-    Direction Dir = Direction::L; // Initial direction (can be changed based on info)
+    Direction dir = Direction::L; // Only keep direction, as all other info is available from BattleInfo
 
     // Helper to plan path to closest enemy
     void planPathToClosestEnemy(const BattleInfo& info);

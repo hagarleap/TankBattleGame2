@@ -3,7 +3,7 @@
 
 #include "Position.h"
 #include "Direction.h"
-#include "ActionRequest.h"
+#include "common/ActionRequest.h"
 #include "Board.h"
 #include <queue>
 #include <string>
