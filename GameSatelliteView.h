@@ -20,23 +20,23 @@ public:
 
     char getObjectAt(size_t x, size_t y) const override {
         // Out of bounds
-        if (x >= board.getWidth() || y >= board.getHeight())
+        if (x >= static_cast<size_t>(board.getWidth()) || y >= static_cast<size_t>(board.getHeight()))
             return '&';
         // Self tank takes precedence
         if (x == selfX && y == selfY) return '%';
         // Shells take precedence (if a shell is above a mine, show '*')
         for (const Shell& shell : shells) {
-            if (shell.getPosition().x == x && shell.getPosition().y == y)
+            if (static_cast<size_t>(shell.getPosition().x) == x && static_cast<size_t>(shell.getPosition().y) == y)
                 return '*';
         }
         // Player 1 tanks
         for (const Tank& tank : player1Tanks) {
-            if (tank.isAlive() && tank.getPosition().x == x && tank.getPosition().y == y)
+            if (tank.isAlive() && static_cast<size_t>(tank.getPosition().x) == x && static_cast<size_t>(tank.getPosition().y) == y)
                 return '1';
         }
         // Player 2 tanks
         for (const Tank& tank : player2Tanks) {
-            if (tank.isAlive() && tank.getPosition().x == x && tank.getPosition().y == y)
+            if (tank.isAlive() && static_cast<size_t>(tank.getPosition().x) == x && static_cast<size_t>(tank.getPosition().y) == y)
                 return '2';
         }
         // Board tiles

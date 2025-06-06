@@ -26,7 +26,7 @@ public:
     bool readBoard(const std::string& filename);
 
 private:
-    Board& board;
+    Board board;
     const MyPlayerFactory& playerFactory;
     const MyTankAlgorithmFactory& algoFactory;
     std::unique_ptr<Player> player1;

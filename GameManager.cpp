@@ -8,9 +8,12 @@
 #include <memory>
 
 GameManager::GameManager(const MyPlayerFactory& playerFactory,
-                        const MyTankAlgorithmFactory& algoFactory,
-    bool verbose)
-    : board(board), playerFactory(playerFactory), algoFactory(algoFactory), verbose(verbose) {
+                       const MyTankAlgorithmFactory& algoFactory,
+                       bool verbose)
+    : board(1, 1),
+      playerFactory(playerFactory),
+      algoFactory(algoFactory),
+      verbose(verbose) {
     // Tanks will be initialized in readBoard
     // Players and algorithms will be created after tanks are known
 }
@@ -26,12 +29,9 @@ struct TankOutputStatus {
 void GameManager::run(int maxSteps) {
     // Prepare output status for all tanks in board order
     std::vector<TankOutputStatus> tankStatus;
-    for (const Tank& t : player1Tanks) tankStatus.push_back({true, false, false, ""});
-    for (const Tank& t : player2Tanks) tankStatus.push_back({true, false, false, ""});
+    for (size_t i = 0; i < player1Tanks.size(); ++i) tankStatus.push_back({true, false, false, ""});
+    for (size_t i = 0; i < player2Tanks.size(); ++i) tankStatus.push_back({true, false, false, ""});
     std::vector<std::string> outputLines;
-    int tanksTotal = (int)player1Tanks.size() + (int)player2Tanks.size();
-    int tanksP1 = (int)player1Tanks.size();
-    int tanksP2 = (int)player2Tanks.size();
     int round = 0;
     int noShellsCounter = 0;
     const int NO_SHELLS_TIE_STEPS = 40;
@@ -71,7 +71,7 @@ void GameManager::run(int maxSteps) {
             // Player 2 tanks
             for (size_t i = 0; i < player2Tanks.size(); ++i) {
                 Tank& tank = player2Tanks[i];
-                TankOutputStatus& status = tankStatus[tanksP1 + i];
+                TankOutputStatus& status = tankStatus[player1Tanks.size() + i];
                 std::string actionStr;
                 if (!status.alive) {
                     actionStr = "killed";
