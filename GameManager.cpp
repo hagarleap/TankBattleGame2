@@ -600,7 +600,9 @@ bool GameManager::readBoard(const std::string& filename) {
     size_t p1y = player1Tanks.empty() ? 0 : player1Tanks[0].getPosition().y;
     size_t p2x = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().x;
     size_t p2y = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().y;
+    std::cout << "Making Player 1" << std::endl;
     player1 = playerFactory.create(1, p1x, p1y, maxSteps, numShells);
+    std::cout << "Making Player 2" << std::endl;
     player2 = playerFactory.create(2, p2x, p2y, maxSteps, numShells);
     tankAlgos1.clear();
     tankAlgos2.clear();

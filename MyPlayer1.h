@@ -1,5 +1,8 @@
 #pragma once
 #include "common/Player.h"
+#include "Direction.h"
+#include <queue>
+
 
 class MyPlayer1 : public Player {
 public:
@@ -16,4 +19,6 @@ protected:
     size_t maxSteps;
     size_t numShells;
     int playerIndex;
+
+
 };
