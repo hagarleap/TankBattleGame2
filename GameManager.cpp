@@ -577,9 +577,12 @@ bool GameManager::readBoard(const std::string& filename) {
         }
         ++row;
     }
-    if (row < rows) {
-        errorFile << "Error: Missing board rows. Expected " << rows << ", got " << row << "." << std::endl;
-        return false;
+    // Fill missing rows with blanks (EMPTY tiles)
+    while (row < rows) {
+        for (int col = 0; col < cols; ++col) {
+            board.getTile(col, row).setType(TileType::EMPTY);
+        }
+        ++row;
     }
     // Check for too many tanks (optional, if spec requires)
     // if (player1Tanks.size() > MAX_TANKS) { errorFile << ... }
