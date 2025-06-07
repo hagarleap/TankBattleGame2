@@ -16,8 +16,8 @@
 
 class GameManager {
 public:
-    GameManager(const MyPlayerFactory& playerFactory,
-                const MyTankAlgorithmFactory& algoFactory,
+    GameManager(MyPlayerFactory playerFactory,
+                MyTankAlgorithmFactory algoFactory,
                 bool verbose = false);
 
     void run(int maxSteps = 1000);
@@ -27,8 +27,8 @@ public:
 
 private:
     Board board;
-    const MyPlayerFactory& playerFactory;
-    const MyTankAlgorithmFactory& algoFactory;
+    MyPlayerFactory playerFactory;
+    MyTankAlgorithmFactory algoFactory;
     std::unique_ptr<Player> player1;
     std::unique_ptr<Player> player2;
     std::vector<std::unique_ptr<TankAlgorithm>> tankAlgos1;

@@ -7,13 +7,13 @@
 #include <regex>
 #include <memory>
 
-GameManager::GameManager(const MyPlayerFactory& playerFactory,
-                       const MyTankAlgorithmFactory& algoFactory,
-                       bool verbose)
-    : board(1, 1),
-      playerFactory(playerFactory),
-      algoFactory(algoFactory),
-      verbose(verbose) {
+GameManager::GameManager(MyPlayerFactory playerFactory,
+                        MyTankAlgorithmFactory algoFactory,
+                        bool verbose): 
+    board(1, 1),
+    playerFactory(std::move(playerFactory)),
+    algoFactory(std::move(algoFactory)),
+    verbose(verbose) {
     // Tanks will be initialized in readBoard
     // Players and algorithms will be created after tanks are known
 }
