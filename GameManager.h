@@ -42,7 +42,7 @@ private:
     bool gameOver = false;
     std::string resultMessage;
 
-    void tick();
+    void tick(const std::vector<ActionRequest>& actions1, const std::vector<ActionRequest>& actions2);
     void handleActionRequest(Tank& tank, ActionRequest& action);
     void moveShells();
     void checkCollisions();

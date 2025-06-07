@@ -41,16 +41,18 @@ void GameManager::run(int maxSteps) {
         if (stepCounter%2 == 0) {
             // --- Output logging for this round ---
             std::vector<std::string> actionsThisRound;
+            std::vector<ActionRequest> actions1, actions2;
             // Player 1 tanks
             for (size_t i = 0; i < player1Tanks.size(); ++i) {
                 Tank& tank = player1Tanks[i];
                 TankOutputStatus& status = tankStatus[i];
                 std::string actionStr;
+                ActionRequest action = ActionRequest::DoNothing;
                 if (!status.alive) {
                     actionStr = "killed";
                 } else {
                     auto& algo = tankAlgos1[i];
-                    ActionRequest action = algo->getAction();
+                    action = algo->getAction();
                     actionStr = to_string(action);
                     if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
                         actionStr += " (ignored)";
@@ -64,6 +66,7 @@ void GameManager::run(int maxSteps) {
                         status.killedThisStep = false;
                     }
                 }
+                actions1.push_back(action);
                 actionsThisRound.push_back(actionStr);
                 status.lastAction = actionStr;
                 status.ignored = false;
@@ -73,11 +76,12 @@ void GameManager::run(int maxSteps) {
                 Tank& tank = player2Tanks[i];
                 TankOutputStatus& status = tankStatus[player1Tanks.size() + i];
                 std::string actionStr;
+                ActionRequest action = ActionRequest::DoNothing;
                 if (!status.alive) {
                     actionStr = "killed";
                 } else {
                     auto& algo = tankAlgos2[i];
-                    ActionRequest action = algo->getAction();
+                    action = algo->getAction();
                     actionStr = to_string(action);
                     if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
                         actionStr += " (ignored)";
@@ -91,6 +95,7 @@ void GameManager::run(int maxSteps) {
                         status.killedThisStep = false;
                     }
                 }
+                actions2.push_back(action);
                 actionsThisRound.push_back(actionStr);
                 status.lastAction = actionStr;
                 status.ignored = false;
@@ -108,7 +113,7 @@ void GameManager::run(int maxSteps) {
                 printBoard();
                 std::cout << "----------------------" << std::endl;
             }
-            tick();
+            tick(actions1, actions2);
             checkCollisions();
             ++round;
         }
@@ -151,86 +156,23 @@ void GameManager::run(int maxSteps) {
     out << resultMessage << "\n";
 }
 
-void GameManager::tick() {
+void GameManager::tick(const std::vector<ActionRequest>& actions1, const std::vector<ActionRequest>& actions2) {
     // Player 1
     for (size_t i = 0; i < player1Tanks.size(); ++i) {
         Tank& tank = player1Tanks[i];
         if (!tank.isAlive()) continue;
-        auto& algo = tankAlgos1[i];
-        ActionRequest action = algo->getAction();
+        ActionRequest action = (i < actions1.size()) ? actions1[i] : ActionRequest::DoNothing;
         bool success = true;
         if (action == ActionRequest::GetBattleInfo) {
             GameSatelliteView satelliteView(
                 board, player1Tanks, player2Tanks, shells,
                 tank.getPosition().x, tank.getPosition().y, tank.getPlayerId()
             );
-            player1->updateTankWithBattleInfo(*algo, satelliteView);
+            player1->updateTankWithBattleInfo(*tankAlgos1[i], satelliteView);
             recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
             tank.tickCooldown();
             continue;
         }
-
-        if (tank.isWaitingForBackward()) {
-            if (action == ActionRequest::MoveForward) {
-                tank.cancelBackward(); 
-            } else {
-
-                success = false;
-                recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
-                tank.stepBackwardTimer();
-                tank.clearJustMovedBackwardFlag();
-                continue;
-            }
-        }
-
-        if (tank.isReadyToMoveBackward()) {
-            Position backPos = board.wrapPosition(tank.getPosition().move(opposite(tank.getDirection()), 1));
-            Tile& targetTile = board.getTile(backPos);
-
-            if (targetTile.isWall()) {
-                success = false;
-            } else {
-
-                tank.moveBackward(board);
-            }
-
-            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
-            tank.tickCooldown();
-            continue;
-        }
-
-        if (action == ActionRequest::MoveBackward) {
-            
-            tank.requestBackward();
-            success = true;
-            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
-            tank.tickCooldown();
-            continue;
-        }
-
-        handleActionRequest(tank, action);
-        if (tank.hasJustMovedBackward() && action != ActionRequest::MoveBackward) {
-            tank.resetBackwardState();
-        }
-    }
-    // Player 2
-    for (size_t i = 0; i < player2Tanks.size(); ++i) {
-        Tank& tank = player2Tanks[i];
-        if (!tank.isAlive()) continue;
-        auto& algo = tankAlgos2[i];
-        ActionRequest action = algo->getAction();
-        bool success = true;
-        if (action == ActionRequest::GetBattleInfo) {
-            GameSatelliteView satelliteView(
-                board, player1Tanks, player2Tanks, shells,
-                tank.getPosition().x, tank.getPosition().y, tank.getPlayerId()
-            );
-            player2->updateTankWithBattleInfo(*algo, satelliteView);
-            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
-            tank.tickCooldown();
-            continue;
-        }
-
         if (tank.isWaitingForBackward()) {
             if (action == ActionRequest::MoveForward) {
                 tank.cancelBackward();
@@ -242,22 +184,18 @@ void GameManager::tick() {
                 continue;
             }
         }
-
         if (tank.isReadyToMoveBackward()) {
             Position backPos = board.wrapPosition(tank.getPosition().move(opposite(tank.getDirection()), 1));
             Tile& targetTile = board.getTile(backPos);
-
             if (targetTile.isWall()) {
                 success = false;
             } else {
                 tank.moveBackward(board);
             }
-
             recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
             tank.tickCooldown();
             continue;
         }
-
         if (action == ActionRequest::MoveBackward) {
             tank.requestBackward();
             success = true;
@@ -265,7 +203,57 @@ void GameManager::tick() {
             tank.tickCooldown();
             continue;
         }
-
+        handleActionRequest(tank, action);
+        if (tank.hasJustMovedBackward() && action != ActionRequest::MoveBackward) {
+            tank.resetBackwardState();
+        }
+    }
+    // Player 2
+    for (size_t i = 0; i < player2Tanks.size(); ++i) {
+        Tank& tank = player2Tanks[i];
+        if (!tank.isAlive()) continue;
+        ActionRequest action = (i < actions2.size()) ? actions2[i] : ActionRequest::DoNothing;
+        bool success = true;
+        if (action == ActionRequest::GetBattleInfo) {
+            GameSatelliteView satelliteView(
+                board, player1Tanks, player2Tanks, shells,
+                tank.getPosition().x, tank.getPosition().y, tank.getPlayerId()
+            );
+            player2->updateTankWithBattleInfo(*tankAlgos2[i], satelliteView);
+            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+            tank.tickCooldown();
+            continue;
+        }
+        if (tank.isWaitingForBackward()) {
+            if (action == ActionRequest::MoveForward) {
+                tank.cancelBackward();
+            } else {
+                success = false;
+                recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+                tank.stepBackwardTimer();
+                tank.clearJustMovedBackwardFlag();
+                continue;
+            }
+        }
+        if (tank.isReadyToMoveBackward()) {
+            Position backPos = board.wrapPosition(tank.getPosition().move(opposite(tank.getDirection()), 1));
+            Tile& targetTile = board.getTile(backPos);
+            if (targetTile.isWall()) {
+                success = false;
+            } else {
+                tank.moveBackward(board);
+            }
+            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+            tank.tickCooldown();
+            continue;
+        }
+        if (action == ActionRequest::MoveBackward) {
+            tank.requestBackward();
+            success = true;
+            recordAction(tank.getPlayerId(), tank.getTankId(), action, success);
+            tank.tickCooldown();
+            continue;
+        }
         handleActionRequest(tank, action);
         if (tank.hasJustMovedBackward() && action != ActionRequest::MoveBackward) {
             tank.resetBackwardState();
@@ -579,9 +567,12 @@ bool GameManager::readBoard(const std::string& filename) {
                     player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R);
                     tile.setType(TileType::TANK2);
                 }
-            } else if (ch != ' ' && ch != '\r' && ch != '\n') {
+            } else if (ch == ' ' || ch == '\r' || ch == '\n') {
+                tile.setType(TileType::EMPTY);
+            } else {
                 errorFile << "Error: Unrecognized character '" << ch << "' at (" << row << "," << col << ")." << std::endl;
                 errorFound = true;
+                tile.setType(TileType::EMPTY); // treat as empty
             }
         }
         ++row;
