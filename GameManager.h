@@ -20,7 +20,7 @@ public:
                 MyTankAlgorithmFactory algoFactory,
                 bool verbose = false);
 
-    void run(int maxSteps = 1000);
+    void run();
     void writeLog(const std::string& outputFile) const;
     std::string getResultMessage() const;
     bool readBoard(const std::string& filename);
@@ -38,6 +38,7 @@ private:
     std::vector<Shell> shells;
     bool verbose = false;
     int stepCounter = 0;
+    int maxSteps = 1000;
     std::vector<std::string> log;
     bool gameOver = false;
     std::string resultMessage;

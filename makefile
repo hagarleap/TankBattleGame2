@@ -1,7 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c++20
-
+CXXFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c++20 -g
 # Auto-detect all .cpp files
 SRCS := $(wildcard *.cpp)
 

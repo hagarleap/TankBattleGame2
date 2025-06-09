@@ -14,3 +14,26 @@ size_t MyBattleInfo::getBoardHeight() const {
 const SatelliteView* MyBattleInfo::getSatelliteView() const {
     return satelliteView;
 }
+void MyBattleInfo::setSelf(std::pair<int, int> pos) {
+    selfPosition = pos;
+}
+
+std::optional<std::pair<int, int>> MyBattleInfo::getSelf() const {
+    return selfPosition;
+}
+
+void MyBattleInfo::setEnemy(std::pair<int, int> pos) {
+    enemyTarget = pos;
+}
+
+std::optional<std::pair<int, int>> MyBattleInfo::getEnemy() const {
+    return enemyTarget;
+}
+
+void MyBattleInfo::setShootFlag(bool val) {
+    shootHint = val;
+}
+
+bool MyBattleInfo::shouldShoot() const {
+    return shootHint;
+}

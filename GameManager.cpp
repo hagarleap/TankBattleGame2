@@ -26,7 +26,7 @@ struct TankOutputStatus {
     std::string lastAction;
 };
 
-void GameManager::run(int maxSteps) {
+void GameManager::run() {
     // Prepare output status for all tanks in board order
     std::vector<TankOutputStatus> tankStatus;
     for (size_t i = 0; i < player1Tanks.size(); ++i) tankStatus.push_back({true, false, false, ""});
@@ -53,6 +53,7 @@ void GameManager::run(int maxSteps) {
                 } else {
                     auto& algo = tankAlgos1[i];
                     action = algo->getAction();
+                    std::cout << "Tank " << tank.getTankId() << " action: " << to_string(action) << std::endl;
                     actionStr = to_string(action);
                     if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
                         actionStr += " (ignored)";
@@ -515,6 +516,7 @@ bool GameManager::readBoard(const std::string& filename) {
         std::cerr << "Error: Cannot open input_errors.txt for writing." << std::endl;
         return false;
     }
+
     std::ifstream inputFile(filename);
     if (!inputFile) {
         errorFile << "Error: Cannot open input file: " << filename << std::endl;
@@ -522,43 +524,65 @@ bool GameManager::readBoard(const std::string& filename) {
     }
 
     std::string line;
+
+    // Skip Line 1: Map name / description
     if (!std::getline(inputFile, line)) {
         errorFile << "Error: Missing map name/description line." << std::endl;
         return false;
     }
+
+    // Read Lines 2–5: header info
     int maxSteps = 0, numShells = 0, rows = 0, cols = 0;
     std::regex reNum(R"(=\s*(\d+))");
+
     for (int i = 0; i < 4; ++i) {
         if (!std::getline(inputFile, line)) {
-            errorFile << "Error: Missing header line " << (i+2) << std::endl;
+            errorFile << "Error: Missing header line " << (i + 2) << std::endl;
             return false;
         }
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         std::smatch m;
-        if (i == 0 && std::regex_search(line, m, reNum)) maxSteps = std::stoi(m[1]);
-        if (i == 1 && std::regex_search(line, m, reNum)) numShells = std::stoi(m[1]);
-        if (i == 2 && std::regex_search(line, m, reNum)) rows = std::stoi(m[1]);
-        if (i == 3 && std::regex_search(line, m, reNum)) cols = std::stoi(m[1]);
+        if (std::regex_search(line, m, reNum)) {
+            int value = std::stoi(m[1]);
+            if (i == 0) maxSteps = value;
+            if (i == 1) numShells = value;
+            if (i == 2) rows = value;
+            if (i == 3) cols = value;
+        } else {
+            errorFile << "Error: Invalid format in header line " << (i + 2) << ": " << line << std::endl;
+            return false;
+        }
     }
+    this->maxSteps = maxSteps;
+
     if (rows <= 0 || cols <= 0) {
         errorFile << "Error: Invalid board dimensions (rows=" << rows << ", cols=" << cols << ")." << std::endl;
         return false;
     }
+
     board = Board(cols, rows);
     player1Tanks.clear();
     player2Tanks.clear();
-    int row = 0;
     bool errorFound = false;
+    int row = 0;
+
     while (std::getline(inputFile, line) && row < rows) {
-        if ((int)line.size() < cols) line += std::string(cols - line.size(), ' ');
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+        if ((int)line.size() < cols)
+            line += std::string(cols - line.size(), ' ');
+        else if ((int)line.size() > cols)
+            line = line.substr(0, cols);  // Trim extra columns
+
         for (int col = 0; col < cols; ++col) {
             char ch = line[col];
             Tile& tile = board.getTile(col, row);
+
             if (ch == '#') {
                 board.placeWall(Position(col, row));
             } else if (ch == '@') {
                 board.placeMine(Position(col, row));
             } else if (ch >= '0' && ch <= '9') {
-                int playerId = (ch == '1' || ch == '0') ? 1 : 2;
+                int playerId = (ch == '0' || ch == '1') ? 1 : 2;
                 int tankIdx = (playerId == 1) ? player1Tanks.size() : player2Tanks.size();
                 if (playerId == 1) {
                     player1Tanks.emplace_back(1, tankIdx, Position(col, row), Direction::L);
@@ -567,37 +591,33 @@ bool GameManager::readBoard(const std::string& filename) {
                     player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R);
                     tile.setType(TileType::TANK2);
                 }
-            } else if (ch == ' ' || ch == '\r' || ch == '\n') {
+            } else if (ch == ' ') {
                 tile.setType(TileType::EMPTY);
             } else {
                 errorFile << "Error: Unrecognized character '" << ch << "' at (" << row << "," << col << ")." << std::endl;
+                tile.setType(TileType::EMPTY);  // Treat as empty
                 errorFound = true;
-                tile.setType(TileType::EMPTY); // treat as empty
             }
         }
         ++row;
     }
-    // Fill missing rows with blanks (EMPTY tiles)
+
+    // Fill missing rows with empty tiles
     while (row < rows) {
         for (int col = 0; col < cols; ++col) {
             board.getTile(col, row).setType(TileType::EMPTY);
         }
         ++row;
     }
-    // Check for too many tanks (optional, if spec requires)
-    // if (player1Tanks.size() > MAX_TANKS) { errorFile << ... }
-    // if (player2Tanks.size() > MAX_TANKS) { errorFile << ... }
-    // Do NOT treat missing tanks as an error; run() will handle immediate loss
+
     if (errorFound) return false;
-    // After tanks are known, create players and tank algorithms
-    size_t p1x = player1Tanks.empty() ? 0 : player1Tanks[0].getPosition().x;
-    size_t p1y = player1Tanks.empty() ? 0 : player1Tanks[0].getPosition().y;
-    size_t p2x = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().x;
-    size_t p2y = player2Tanks.empty() ? 0 : player2Tanks[0].getPosition().y;
+
+    // Create players + tank algorithms
     std::cout << "Making Player 1" << std::endl;
-    player1 = playerFactory.create(1, p1x, p1y, maxSteps, numShells);
+    player1 = playerFactory.create(1, cols, rows, maxSteps, numShells);  // ✅ width, height
     std::cout << "Making Player 2" << std::endl;
-    player2 = playerFactory.create(2, p2x, p2y, maxSteps, numShells);
+    player2 = playerFactory.create(2, cols, rows, maxSteps, numShells);  // ✅ width, height
+
     tankAlgos1.clear();
     tankAlgos2.clear();
     for (const Tank& tank : player1Tanks) {
@@ -606,6 +626,7 @@ bool GameManager::readBoard(const std::string& filename) {
     for (const Tank& tank : player2Tanks) {
         tankAlgos2.push_back(algoFactory.create(2, tank.getTankId()));
     }
+
     return true;
 }
 

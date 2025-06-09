@@ -1,78 +1,83 @@
+// MyTankAlgorithm1.cpp
 #include "MyTankAlgorithm1.h"
-#include "common/ActionRequest.h"
 #include "MyBattleInfo.h"
+#include <cmath>
 #include <queue>
 #include <set>
+#include <iostream>
 #include <tuple>
-#include <cmath>
 
-
-MyTankAlgorithm1::MyTankAlgorithm1() : dir(Direction::L) {}
+MyTankAlgorithm1::MyTankAlgorithm1() {}
 
 ActionRequest MyTankAlgorithm1::getAction() {
-    stepCounter++;
-    if (stepCounter % 5 == 0) {
-        return ActionRequest::GetBattleInfo;
-    }
     if (!plannedActions.empty()) {
         ActionRequest next = plannedActions.front();
         plannedActions.pop();
-        // Update dir if rotating
+
         if (next == ActionRequest::RotateRight90) dir = rotateR4(dir);
         else if (next == ActionRequest::RotateLeft90) dir = rotateL4(dir);
         else if (next == ActionRequest::RotateRight45) dir = rotateR8(dir);
         else if (next == ActionRequest::RotateLeft45) dir = rotateL8(dir);
+
         return next;
     }
-    return ActionRequest::DoNothing;
+    return ActionRequest::GetBattleInfo;
 }
 
 void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
-    planPathToClosestEnemy(info);
-}
-
-void MyTankAlgorithm1::planPathToClosestEnemy(const BattleInfo& info) {
-    plannedActions = std::queue<ActionRequest>();
+    std::cout << "[TankAlgo1] Received updateBattleInfo\n";
     const MyBattleInfo* myInfo = dynamic_cast<const MyBattleInfo*>(&info);
     if (!myInfo) return;
+
+    plannedActions = std::queue<ActionRequest>();
+
+    auto enemyOpt = myInfo->getEnemy();
+    if (!enemyOpt.has_value()) {
+        std::cout << "[TankAlgo1] No enemy assigned\n";
+        return;
+    }
+
+    auto [ex, ey] = enemyOpt.value();
+
+    auto selfOpt = myInfo->getSelf();
+    if (!selfOpt.has_value()) {
+        std::cout << "[TankAlgo1] No self position assigned\n";
+        return;
+    }
+    auto [myX, myY] = selfOpt.value();
+    
     const SatelliteView* view = myInfo->getSatelliteView();
-    if (!view) return;
     size_t width = myInfo->getBoardWidth();
     size_t height = myInfo->getBoardHeight();
 
-    // Find my tank and enemy tanks
-    int myX = -1, myY = -1;
-    std::vector<std::pair<int, int>> enemies;
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            char obj = view->getObjectAt(x, y);
-            if (obj == '%') { myX = x; myY = y; }
-            else if (obj == '2') { enemies.emplace_back(x, y); }
-        }
+        // ✅ Prioritize shooting if flagged
+    if (myInfo->shouldShoot()) {
+        aimAndShoot(ex, ey, myX, myY);
+        return;
     }
-    if (myX == -1 || myY == -1 || enemies.empty()) return;
 
-    // BFS to find closest enemy (all directions)
-    struct Node { int x, y, dist; std::vector<ActionRequest> path; Direction dir; };
+    // Perform BFS to check if a path exists to the enemy
+    struct Node {
+        int x, y, dist;
+        std::vector<ActionRequest> path;
+        Direction dir;
+    };
     std::queue<Node> q;
-    std::set<std::tuple<int, int, Direction>> visited;
+    std::set<std::tuple<int, int, int>> visited; // Use int instead of Direction
     q.push({myX, myY, 0, {}, dir});
-    visited.insert({myX, myY, dir});
-    int minDist = 1e9;
+    visited.insert(std::make_tuple(myX, myY, static_cast<int>(dir)));
     std::vector<ActionRequest> bestPath;
+    bool pathFound = false;
+
     while (!q.empty()) {
         Node node = q.front(); q.pop();
-        for (auto& e : enemies) {
-            if (node.x == e.first && node.y == e.second) {
-                if (node.dist < minDist) {
-                    minDist = node.dist;
-                    bestPath = node.path;
-                }
-            }
+        if (node.x == ex && node.y == ey) {
+            bestPath = node.path;
+            pathFound = true;
+            break;
         }
         if (node.dist >= 20) continue;
 
-        // Try moving forward in current direction
         int dx = 0, dy = 0;
         switch (node.dir) {
             case Direction::U:  dy = -1; break;
@@ -85,18 +90,19 @@ void MyTankAlgorithm1::planPathToClosestEnemy(const BattleInfo& info) {
             case Direction::UL: dx = -1; dy = -1; break;
             default: break;
         }
-        int nx = node.x + dx, ny = node.y + dy;
+        int nx = node.x + dx;
+        int ny = node.y + dy;
         if (nx >= 0 && nx < (int)width && ny >= 0 && ny < (int)height) {
             char obj = view->getObjectAt(nx, ny);
-            if (obj != '#' && obj != '*') {
-                if (!visited.count({nx, ny, node.dir})) {
+            if (obj != '#' && obj != '@') {
+                if (!visited.count(std::make_tuple(nx, ny, static_cast<int>(node.dir)))) {
                     auto newPath = node.path; newPath.push_back(ActionRequest::MoveForward);
-                    q.push({nx, ny, node.dist+1, newPath, node.dir});
-                    visited.insert({nx, ny, node.dir});
+                    q.push({nx, ny, node.dist + 1, newPath, node.dir});
+                    visited.insert(std::make_tuple(nx, ny, static_cast<int>(node.dir)));
                 }
             }
         }
-        // Try all rotations (90 and 45 degrees)
+
         Direction dirs[4] = {
             rotateR4(node.dir), rotateL4(node.dir),
             rotateR8(node.dir), rotateL8(node.dir)
@@ -106,15 +112,48 @@ void MyTankAlgorithm1::planPathToClosestEnemy(const BattleInfo& info) {
             ActionRequest::RotateRight45, ActionRequest::RotateLeft45
         };
         for (int i = 0; i < 4; ++i) {
-            if (!visited.count({node.x, node.y, dirs[i]})) {
+            if (!visited.count(std::make_tuple(node.x, node.y, static_cast<int>(dirs[i])))) {
                 auto newPath = node.path; newPath.push_back(acts[i]);
-                q.push({node.x, node.y, node.dist+1, newPath, dirs[i]});
-                visited.insert({node.x, node.y, dirs[i]});
+                q.push({node.x, node.y, node.dist + 1, newPath, dirs[i]});
+                visited.insert(std::make_tuple(node.x, node.y, static_cast<int>(dirs[i])));
             }
         }
     }
-    // Plan up to 4 actions to get closer
-    for (size_t i = 0; i < bestPath.size() && i < 4; ++i) {
+
+    if (!pathFound) {
+        aimAndShoot(ex, ey, myX, myY);
+        return;
+    }
+
+    std::cout << "[TankAlgo1] Found path with " << bestPath.size() << " steps\n";
+    for (size_t i = 0; i < bestPath.size() && i < 3; ++i) {
         plannedActions.push(bestPath[i]);
     }
 }
+
+void MyTankAlgorithm1::aimAndShoot(int ex, int ey, int myX, int myY) {
+    Direction desiredDir = computeDirection(ex - myX, ey - myY);
+    Direction current = dir;
+
+    for (int i = 0; i < 3; ++i) {
+        ActionRequest rot = rotateToward(current, desiredDir);
+        if (rot == ActionRequest::DoNothing) {
+            plannedActions.push(ActionRequest::Shoot);
+            // Fill remaining steps with DoNothing
+            while (++i < 3)
+                plannedActions.push(ActionRequest::DoNothing);
+            return;
+        }
+
+        // Apply the rotation
+        plannedActions.push(rot);
+        // Update simulated direction
+        switch (rot) {
+            case ActionRequest::RotateRight45: current = rotateR8(current); break;
+            case ActionRequest::RotateLeft45:  current = rotateL8(current); break;
+            case ActionRequest::RotateRight90: current = rotateR4(current); break;
+            case ActionRequest::RotateLeft90:  current = rotateL4(current); break;
+            default: break;
+        }
+    }
+    }

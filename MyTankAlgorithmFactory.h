@@ -13,7 +13,7 @@ std::unique_ptr<TankAlgorithm> create(int player_index, int tank_index) const {
         case 1:
             return std::make_unique<MyTankAlgorithm1>();
         case 2:
-            return std::make_unique<MyTankAlgorithm1>();
+            return std::make_unique<MyTankAlgorithm2>();
         default:
             throw std::invalid_argument("Invalid player index");
     }

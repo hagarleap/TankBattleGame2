@@ -1,9 +1,9 @@
 #pragma once
-#include "common/TankAlgorithm.h"
+#include "BaseTankAlgorithm.h"
 #include "Direction.h"
-#include <optional>
+#include <iostream>
 
-class MyTankAlgorithm2 : public TankAlgorithm {
+class MyTankAlgorithm2 : public BaseTankAlgorithm {
 public:
     MyTankAlgorithm2();
 

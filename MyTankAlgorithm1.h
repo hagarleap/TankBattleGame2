@@ -1,11 +1,13 @@
+// MyTankAlgorithm1.h
 #pragma once
-#include "common/TankAlgorithm.h"
+
+#include "BaseTankAlgorithm.h"
+#include "common/ActionRequest.h"
+#include "common/SatelliteView.h"
 #include "Direction.h"
 #include <queue>
-#include <vector>
-#include <optional>
 
-class MyTankAlgorithm1 : public TankAlgorithm {
+class MyTankAlgorithm1 : public BaseTankAlgorithm  {
 public:
     MyTankAlgorithm1();
 
@@ -13,10 +15,7 @@ public:
     void updateBattleInfo(BattleInfo& info) override;
 
 private:
-    int stepCounter = 0;
+    Direction dir = Direction::L;
     std::queue<ActionRequest> plannedActions;
-    Direction dir = Direction::L; // Only keep direction, as all other info is available from BattleInfo
-
-    // Helper to plan path to closest enemy
-    void planPathToClosestEnemy(const BattleInfo& info);
+    void aimAndShoot(int ex, int ey, int myX, int myY);
 };
