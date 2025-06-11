@@ -7,7 +7,11 @@
 #include <iostream>
 #include <tuple>
 
-MyTankAlgorithm1::MyTankAlgorithm1() {}
+MyTankAlgorithm1::MyTankAlgorithm1(int id) : tankId(id) {}
+
+int MyTankAlgorithm1::getId() const {
+    return tankId;
+}
 
 ActionRequest MyTankAlgorithm1::getAction() {
     if (cooldownCounter > 0)

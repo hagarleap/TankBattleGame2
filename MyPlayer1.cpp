@@ -1,6 +1,7 @@
 #include "MyPlayer1.h"
 #include "MyBattleInfo.h"
 #include "GameSatelliteView.h"
+#include "MyTankAlgorithm1.h"
 #include <cmath>
 #include <iostream>
 
@@ -17,33 +18,81 @@ void MyPlayer1::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& sat
     std::pair<int, int> self{-1, -1};
     std::vector<std::pair<int, int>> enemies;
 
+    std::cout << "[Player1] Scanning board for self and enemies\n";
     for (size_t y = 0; y < boardHeight; ++y) {
         for (size_t x = 0; x < boardWidth; ++x) {
             char c = gview->getObjectAt(x, y);
-            if (c == '%'){
+            if (c == '%') {
                 self = {static_cast<int>(x), static_cast<int>(y)};
                 info.setSelf(self);
-            } 
-            else if (c == '2'){
+                std::cout << "[Player1] Found self at (" << x << ", " << y << ")\n";
+            } else if (c == '2') {
                 enemies.emplace_back(static_cast<int>(x), static_cast<int>(y));
-            } 
+                std::cout << "[Player1] Found enemy at (" << x << ", " << y << ")\n";
+            }
         }
     }
 
     if (self.first == -1 || enemies.empty()) {
+        std::cout << "[Player1] No self or enemies found, clearing assignments\n";
+        assignedEnemies.clear();
+        prevEnemyLayout.clear();
         tank.updateBattleInfo(info);
         return;
     }
 
-    auto target = findClosestEnemy(self, enemies);
-    info.setEnemy(target);
-
-    int dx = toroidalDist(target.first, self.first, boardWidth);
-    int dy = toroidalDist(target.second, self.second, boardHeight);
-    if (dx <= 2 && dy <= 2){
-        info.setShootFlag(true);
+    std::unordered_set<std::pair<int, int>, pair_hash> currentEnemies(enemies.begin(), enemies.end());
+    if (currentEnemies != prevEnemyLayout) {
+        std::cout << "[Player1] Detected enemy layout change. Clearing assignments.\n";
+        assignedEnemies.clear();
+        prevEnemyLayout = currentEnemies;
     }
-        
+
+    int tankId = -1;
+    if (auto* myTank = dynamic_cast<MyTankAlgorithm1*>(&tank)) {
+        tankId = myTank->getId();
+        std::cout << "[Player1] Tank ID = " << tankId << "\n";
+    }
+
+    // If this tank was already assigned an enemy in the last step, reuse that enemy
+    auto it = tankAssignments.find(tankId);
+    if (it != tankAssignments.end() && currentEnemies.count(it->second)) {
+        info.setEnemy(it->second);
+        std::cout << "[Player1] Reusing previous assignment for tank " << tankId << ": ("
+                  << it->second.first << ", " << it->second.second << ")\n";
+    } else {
+        std::pair<int, int> target = {-1, -1};
+        int minDist = 1e9;
+        for (const auto& e : enemies) {
+            if (assignedEnemies.count(e)) continue;
+            int dx = toroidalDist(self.first, e.first, boardWidth);
+            int dy = toroidalDist(self.second, e.second, boardHeight);
+            int dist = dx + dy;
+            if (dist < minDist) {
+                minDist = dist;
+                target = e;
+            }
+        }
+        if (target.first == -1) {
+            target = findClosestEnemy(self, enemies);
+            std::cout << "[Player1] All enemies assigned. Reassigning closest: (" << target.first << ", " << target.second << ")\n";
+        } else {
+            std::cout << "[Player1] Assigned new enemy target: (" << target.first << ", " << target.second << ")\n";
+        }
+        assignedEnemies.insert(target);
+        tankAssignments[tankId] = target;
+        info.setEnemy(target);
+    }
+
+    auto optTarget = info.getEnemy();
+    auto [ex, ey] = *optTarget;
+
+    int dx = toroidalDist(ex, self.first, boardWidth);
+    int dy = toroidalDist(ey, self.second, boardHeight);
+    if (dx == 1 && dy == 1) {
+        info.setShootFlag(true);
+        std::cout << "[Player1] Target in range. Setting shoot flag.\n";
+    }
 
     tank.updateBattleInfo(info);
 }
@@ -55,7 +104,7 @@ std::pair<int, int> MyPlayer1::findClosestEnemy(std::pair<int, int> from,
     for (const auto& e : enemies) {
         int dx = toroidalDist(from.first, e.first, boardWidth);
         int dy = toroidalDist(from.second, e.second, boardHeight);
-        int dist = dx + dy;  // Manhattan distance with wraparound
+        int dist = dx + dy;
         if (dist < minDist) {
             minDist = dist;
             closest = e;
@@ -68,4 +117,3 @@ int MyPlayer1::toroidalDist(int a, int b, int max) {
     int direct = std::abs(a - b);
     return std::min(direct, max - direct);
 }
-

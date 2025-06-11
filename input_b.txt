@@ -1,0 +1,13 @@
+2 - large battlefield
+MaxSteps = 100
+NumShells=10
+Rows = 8
+Cols = 10
+##########
+# 2  @  1#
+#        #
+#  ##### #
+#  # 1 # #
+#  ##### #
+#2       #
+##########

@@ -1,0 +1,9 @@
+1-Small battlefield
+MaxSteps = 100
+NumShells=10
+Rows = 5
+Cols =16
+################
+    #2#
+    1       1 2   
+################

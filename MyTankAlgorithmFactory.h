@@ -11,7 +11,7 @@ public:
         (void)tank_index; // tank_index is not used in this factory
         switch (player_index) {
             case 1:
-                return std::make_unique<MyTankAlgorithm1>();
+                return std::make_unique<MyTankAlgorithm1>(tank_index);
             case 2:
                 return std::make_unique<MyTankAlgorithm2>();
             default:
