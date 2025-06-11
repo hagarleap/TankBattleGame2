@@ -16,7 +16,6 @@ void MyPlayer1::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& sat
     std::pair<int, int> self{-1, -1};
     std::vector<std::pair<int, int>> enemies;
 
-    std::cout << "boardWidth: " << boardWidth << ", boardHeight: " << boardHeight << "\n";
     for (size_t y = 0; y < boardHeight; ++y) {
         for (size_t x = 0; x < boardWidth; ++x) {
             char c = gview->getObjectAt(x, y);
@@ -41,7 +40,6 @@ void MyPlayer1::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& sat
     int dx = toroidalDist(target.first, self.first, boardWidth);
     int dy = toroidalDist(target.second, self.second, boardHeight);
     if (dx <= 2 && dy <= 2){
-        std::cout << "Target is close enough (dx=" << dx << ", dy=" << dy << "), setting shoot flag\n";
         info.setShootFlag(true);
     }
         

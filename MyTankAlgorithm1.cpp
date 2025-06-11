@@ -10,10 +10,10 @@
 MyTankAlgorithm1::MyTankAlgorithm1() {}
 
 ActionRequest MyTankAlgorithm1::getAction() {
-    if (!plannedActions.empty()) {
-        if (cooldownCounter > 0)
+    if (cooldownCounter > 0)
             cooldownCounter--;
 
+    if (!plannedActions.empty()) {
         ActionRequest next = plannedActions.front();
         plannedActions.pop();
 
@@ -31,7 +31,6 @@ ActionRequest MyTankAlgorithm1::getAction() {
 }
 
 void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
-    std::cout << "[TankAlgo1] Received updateBattleInfo\n";
     const MyBattleInfo* myInfo = dynamic_cast<const MyBattleInfo*>(&info);
     if (!myInfo) return;
 
@@ -39,7 +38,6 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
 
     auto enemyOpt = myInfo->getEnemy();
     if (!enemyOpt.has_value()) {
-        std::cout << "[TankAlgo1] No enemy assigned\n";
         return;
     }
 
@@ -47,7 +45,6 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
 
     auto selfOpt = myInfo->getSelf();
     if (!selfOpt.has_value()) {
-        std::cout << "[TankAlgo1] No self position assigned\n";
         return;
     }
     auto [myX, myY] = selfOpt.value();
@@ -129,7 +126,6 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
         return;
     }
 
-    std::cout << "[TankAlgo1] Found path with " << bestPath.size() << " steps\n";
     for (size_t i = 0; i < bestPath.size() && i < 3; ++i) {
         plannedActions.push(bestPath[i]);
     }
