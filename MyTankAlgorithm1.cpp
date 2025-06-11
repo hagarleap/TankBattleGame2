@@ -7,7 +7,7 @@
 #include <iostream>
 #include <tuple>
 
-MyTankAlgorithm1::MyTankAlgorithm1(int id) : tankId(id) {}
+MyTankAlgorithm1::MyTankAlgorithm1(int id) : tankId(id), boardWidth(0), boardHeight(0) {}
 
 int MyTankAlgorithm1::getId() const {
     return tankId;
@@ -15,20 +15,32 @@ int MyTankAlgorithm1::getId() const {
 
 ActionRequest MyTankAlgorithm1::getAction() {
     if (cooldownCounter > 0)
-            cooldownCounter--;
+        cooldownCounter--;
 
     if (!plannedActions.empty()) {
         ActionRequest next = plannedActions.front();
+
+        if (next == ActionRequest::MoveForward && latestEnemyPos.has_value() && latestSelfPos.has_value()) {
+            int dx = ::dx(dir);
+            int dy = ::dy(dir);
+            int nx = wrap(latestSelfPos->first + dx, boardWidth);
+            int ny = wrap(latestSelfPos->second + dy, boardHeight);
+            if (nx == latestEnemyPos->first && ny == latestEnemyPos->second) {
+                while (!plannedActions.empty()) plannedActions.pop();
+                return ActionRequest::GetBattleInfo;
+            }
+            // Update our internal position
+            latestSelfPos = {nx, ny};
+        }
+
         plannedActions.pop();
 
-        if (next == ActionRequest::Shoot){
+        if (next == ActionRequest::Shoot) {
             if (shells && *shells > 0) {
                 --(*shells);
                 cooldownCounter = 4;
-            }
-            else next = ActionRequest::DoNothing;
+            } else next = ActionRequest::DoNothing;
         }
-            
 
         if (next == ActionRequest::RotateRight90) dir = rotateR4(dir);
         else if (next == ActionRequest::RotateLeft90) dir = rotateL4(dir);
@@ -48,38 +60,34 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
     plannedActions = std::queue<ActionRequest>();
 
     auto enemyOpt = myInfo->getEnemy();
-    if (!enemyOpt.has_value()) {
-        return;
-    }
-
+    if (!enemyOpt.has_value()) return;
     auto [ex, ey] = enemyOpt.value();
+    latestEnemyPos = {ex, ey};
 
     auto selfOpt = myInfo->getSelf();
-    if (!selfOpt.has_value()) {
-        return;
-    }
+    if (!selfOpt.has_value()) return;
     auto [myX, myY] = selfOpt.value();
-    
-    const SatelliteView* view = myInfo->getSatelliteView();
-    size_t width = myInfo->getBoardWidth();
-    size_t height = myInfo->getBoardHeight();
+    latestSelfPos = {myX, myY};
 
-        // ✅ Prioritize shooting if flagged
+    const SatelliteView* view = myInfo->getSatelliteView();
+    boardWidth = myInfo->getBoardWidth();
+    boardHeight = myInfo->getBoardHeight();
+
     if (myInfo->shouldShoot()) {
         aimAndShoot(ex, ey, myX, myY);
         return;
     }
 
-    // Perform BFS to check if a path exists to the enemy
     struct Node {
         int x, y, dist;
         std::vector<ActionRequest> path;
         Direction dir;
     };
     std::queue<Node> q;
-    std::set<std::tuple<int, int, int>> visited; // Use int instead of Direction
+    std::set<std::tuple<int, int, int>> visited;
     q.push({myX, myY, 0, {}, dir});
     visited.insert(std::make_tuple(myX, myY, static_cast<int>(dir)));
+
     std::vector<ActionRequest> bestPath;
     bool pathFound = false;
 
@@ -92,22 +100,18 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
         }
         if (node.dist >= 20) continue;
 
-        int dx = 0, dy = 0;
-        switch (node.dir) {
-            case Direction::U:  dy = -1; break;
-            case Direction::UR: dx = 1; dy = -1; break;
-            case Direction::R:  dx = 1; break;
-            case Direction::DR: dx = 1; dy = 1; break;
-            case Direction::D:  dy = 1; break;
-            case Direction::DL: dx = -1; dy = 1; break;
-            case Direction::L:  dx = -1; break;
-            case Direction::UL: dx = -1; dy = -1; break;
-            default: break;
-        }
-        int nx = wrap(node.x + dx, (int)width);
-        int ny = wrap(node.y + dy, (int)height);
+        int dx = ::dx(node.dir);
+        int dy = ::dy(node.dir);
+        int nx = wrap(node.x + dx, (int)boardWidth);
+        int ny = wrap(node.y + dy, (int)boardHeight);
         char obj = view->getObjectAt(nx, ny);
-        if (obj != '#' && obj != '@') {
+
+        // Allow moving into the enemy's cell only
+        bool isTarget = (nx == ex && ny == ey);
+        bool isBlocked = (obj == '#' || obj == '@' || obj == '%');
+        bool isEnemyButNotTarget = (obj == '2' && !isTarget);
+
+        if (!isBlocked && !isEnemyButNotTarget) {
             if (!visited.count(std::make_tuple(nx, ny, static_cast<int>(node.dir)))) {
                 auto newPath = node.path; newPath.push_back(ActionRequest::MoveForward);
                 q.push({nx, ny, node.dist + 1, newPath, node.dir});
@@ -170,7 +174,6 @@ void MyTankAlgorithm1::aimAndShoot(int ex, int ey, int myX, int myY) {
         futureCooldown = std::max(0, futureCooldown - 1);
     }
 
-    // Final cleanup: if the last planned action is SHOOT but cooldownCounter != 0, replace it
     std::queue<ActionRequest> fixed;
     std::vector<ActionRequest> temp;
 

@@ -53,7 +53,10 @@ void GameManager::run(const std::string& outputFile) {
                 } else {
                     auto& algo = tankAlgos1[i];
                     action = algo->getAction();
-                    std::cout << "Tank " << tank.getTankId() << " action: " << to_string(action) << std::endl;
+                    if (verbose) {
+                        std::cout << "Player 1 Tank " << tank.getTankId() << " action: " << to_string(action) << std::endl;
+                    }
+                    
                     actionStr = to_string(action);
                     if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
                         actionStr += " (ignored)";
@@ -83,6 +86,9 @@ void GameManager::run(const std::string& outputFile) {
                 } else {
                     auto& algo = tankAlgos2[i];
                     action = algo->getAction();
+                    if (verbose) {
+                        std::cout << "Player 2 Tank " << tank.getTankId() << " action: " << to_string(action) << std::endl;
+                    }
                     actionStr = to_string(action);
                     if (tank.isWaitingForBackward() && action != ActionRequest::MoveForward) {
                         actionStr += " (ignored)";
@@ -558,7 +564,9 @@ bool GameManager::readBoard(const std::string& filename) {
     player2Tanks.clear();
     bool errorFound = false;
     int row = 0;
-    std::cout<< "maxSteps: " << maxSteps << ", numShells: " << numShells << ", rows: " << rows << ", cols: " << cols << std::endl;
+    if (verbose) {
+        std::cout<< "maxSteps: " << maxSteps << ", numShells: " << numShells << ", rows: " << rows << ", cols: " << cols << std::endl;
+    }
     // Read the board lines
     while (std::getline(inputFile, line) && row < rows) {
         if ((int)line.size() < cols) line += std::string(cols - line.size(), ' ');

@@ -20,5 +20,10 @@ private:
     Direction dir = Direction::L;
     std::queue<ActionRequest> plannedActions;
     void aimAndShoot(int ex, int ey, int myX, int myY);
+    std::optional<std::pair<int, int>> latestEnemyPos;
+    std::optional<std::pair<int, int>> latestSelfPos;
+    size_t boardWidth = 0;
+    size_t boardHeight = 0;
+
     
 };
