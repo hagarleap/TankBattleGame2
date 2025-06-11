@@ -565,38 +565,33 @@ bool GameManager::readBoard(const std::string& filename) {
     player2Tanks.clear();
     bool errorFound = false;
     int row = 0;
-
+    std::cout<< "maxSteps: " << maxSteps << ", numShells: " << numShells << ", rows: " << rows << ", cols: " << cols << std::endl;
+    // Read the board lines
     while (std::getline(inputFile, line) && row < rows) {
-        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-        if ((int)line.size() < cols)
-            line += std::string(cols - line.size(), ' ');
-        else if ((int)line.size() > cols)
-            line = line.substr(0, cols);  // Trim extra columns
-
+        if ((int)line.size() < cols) line += std::string(cols - line.size(), ' ');
         for (int col = 0; col < cols; ++col) {
             char ch = line[col];
             Tile& tile = board.getTile(col, row);
-
             if (ch == '#') {
                 board.placeWall(Position(col, row));
             } else if (ch == '@') {
                 board.placeMine(Position(col, row));
             } else if (ch >= '0' && ch <= '9') {
-                int playerId = (ch == '0' || ch == '1') ? 1 : 2;
+                int playerId = (ch == '1' || ch == '0') ? 1 : 2;
                 int tankIdx = (playerId == 1) ? player1Tanks.size() : player2Tanks.size();
                 if (playerId == 1) {
-                    player1Tanks.emplace_back(1, tankIdx, Position(col, row), Direction::L);
+                    player1Tanks.emplace_back(1, tankIdx, Position(col, row), Direction::L, numShells);
                     tile.setType(TileType::TANK1);
                 } else {
-                    player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R);
+                    player2Tanks.emplace_back(2, tankIdx, Position(col, row), Direction::R, numShells);
                     tile.setType(TileType::TANK2);
                 }
-            } else if (ch == ' ') {
+            } else if (ch == ' ' || ch == '\r' || ch == '\n') {
                 tile.setType(TileType::EMPTY);
             } else {
                 errorFile << "Error: Unrecognized character '" << ch << "' at (" << row << "," << col << ")." << std::endl;
-                tile.setType(TileType::EMPTY);  // Treat as empty
                 errorFound = true;
+                tile.setType(TileType::EMPTY); // treat as empty
             }
         }
         ++row;

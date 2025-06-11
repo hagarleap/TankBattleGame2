@@ -9,4 +9,13 @@ None, Get Battle Info, Get Battle Info
 Get Battle Info, Get Battle Info, Get Battle Info
 None, Get Battle Info, Get Battle Info
 None, Shoot, Get Battle Info
-Player 2 won with 2 tanks still alive
+Shoot, Get Battle Info, Get Battle Info
+Get Battle Info, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+None, Shoot, Get Battle Info
+Get Battle Info, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+Shoot, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+Tie, both players have zero shells for 40 steps

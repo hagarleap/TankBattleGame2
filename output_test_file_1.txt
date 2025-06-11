@@ -13,8 +13,8 @@ P2-T1: Rotate Right 90 degrees
 P1-T0: Get Battle Info
 P2-T0: Get Battle Info
 P2-T1: Get Battle Info
-P1-T0: Shoot
-P2-T0: Shoot
+P1-T0: Shoot (BAD STEP)
+P2-T0: Shoot (BAD STEP)
 P2-T1: Get Battle Info
 P1-T0: None
 P2-T0: Get Battle Info
@@ -29,6 +29,33 @@ P1-T0: None
 P2-T0: Get Battle Info
 P2-T1: Get Battle Info
 P1-T0: None
-P2-T0: Shoot
+P2-T0: Shoot (BAD STEP)
 P2-T1: Get Battle Info
-Result: Player 2 won with 2 tanks still alive
+P1-T0: Shoot (BAD STEP)
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: Get Battle Info
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: None
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: None
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: None
+P2-T0: Shoot (BAD STEP)
+P2-T1: Get Battle Info
+P1-T0: Get Battle Info
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: None
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: Shoot (BAD STEP)
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+P1-T0: None
+P2-T0: Get Battle Info
+P2-T1: Get Battle Info
+Result: Tie, both players have zero shells for 40 steps

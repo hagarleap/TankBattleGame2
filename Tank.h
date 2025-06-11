@@ -10,7 +10,7 @@
 
 class Tank {
 public:
-    Tank(int playerId, int tankId, Position startPos, Direction startDir);
+    Tank(int playerId, int tankId, Position startPos, Direction startDir, int shells);
 
     int getPlayerId() const;
     int getTankId() const;
@@ -56,7 +56,7 @@ int tankId;
 Position position;
 Position previousPosition; 
 Direction direction;
-int shellsLeft = 16;
+int shellsLeft;
 int shootCooldown = 0;
 bool destroyed = false;
 int backwardStepCounter = -1;  // -1 means no backward requested
