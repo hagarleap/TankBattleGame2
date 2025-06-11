@@ -26,7 +26,7 @@ struct TankOutputStatus {
     std::string lastAction;
 };
 
-void GameManager::run() {
+void GameManager::run(const std::string& outputFile) {
     // Prepare output status for all tanks in board order
     std::vector<TankOutputStatus> tankStatus;
     for (size_t i = 0; i < player1Tanks.size(); ++i) tankStatus.push_back({true, false, false, ""});
@@ -152,7 +152,7 @@ void GameManager::run() {
         resultMessage = "Tie, reached max steps = " + std::to_string(maxSteps) + ", player 1 has " + std::to_string(alive1) + " tanks, player 2 has " + std::to_string(alive2) + " tanks";
     }
     // Write output file
-    std::ofstream out("game_output.txt");
+    std::ofstream out(outputFile);
     for (const auto& line : outputLines) out << line << "\n";
     out << resultMessage << "\n";
 }
@@ -482,13 +482,6 @@ void GameManager::recordAction(int playerId, int tankId, ActionRequest action, b
                            ": " + std::string(to_string(action)) +
                            (success ? "" : " (BAD STEP)");
     log.push_back(logEntry);
-}
-
-void GameManager::writeLog(const std::string& outputFile) const {
-    std::ofstream out(outputFile);
-    for (const auto& entry : log)
-        out << entry << "\n";
-    out << "Result: " << resultMessage << "\n";
 }
 
 std::string GameManager::getResultMessage() const {

@@ -21,8 +21,7 @@ int main(int argc, char* argv[]) {
     game.readBoard(inputFile);
 
     std::cout << "✅ Starting game loop" << std::endl;
-    game.run(); 
-    game.writeLog("output_" + inputFile);
+    game.run("output_" + inputFile);
 
     std::cout << "✅ GameManager finished running" << std::endl;
     std::cout << game.getResultMessage() << std::endl;

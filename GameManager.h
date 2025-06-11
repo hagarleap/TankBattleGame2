@@ -20,8 +20,7 @@ public:
                 MyTankAlgorithmFactory algoFactory,
                 bool verbose = false);
 
-    void run();
-    void writeLog(const std::string& outputFile) const;
+    void run(const std::string& outputFile);
     std::string getResultMessage() const;
     bool readBoard(const std::string& filename);
 
