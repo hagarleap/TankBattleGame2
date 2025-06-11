@@ -2,8 +2,10 @@
 #include <sstream>
 #include <iostream>
 
-Tank::Tank(int playerId, int tankId, Position startPos, Direction startDir)
-    : playerId(playerId), tankId(tankId), position(startPos), direction(startDir) {}
+Tank::Tank(int playerId, int tankId, Position startPos, Direction startDir, int shells)
+    : playerId(playerId), tankId(tankId), position(startPos), previousPosition(startPos),
+      direction(startDir), shellsLeft(shells), shootCooldown(0), destroyed(false),
+      backwardStepCounter(-1), inBackwardMode(false), justMovedBackward(false) {}
 
 int Tank::getPlayerId() const {
     return playerId;
