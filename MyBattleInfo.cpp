@@ -37,3 +37,11 @@ void MyBattleInfo::setShootFlag(bool val) {
 bool MyBattleInfo::shouldShoot() const {
     return shootHint;
 }
+
+void MyBattleInfo::setInitialShells(int shells) { 
+    initialShells = shells;
+}
+
+int MyBattleInfo::getRemainingShells() const { 
+    return initialShells; 
+}

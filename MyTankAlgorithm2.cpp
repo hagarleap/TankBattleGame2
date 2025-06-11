@@ -33,6 +33,14 @@ ActionRequest MyTankAlgorithm2::getAction() {
     if (enemyInLine) {
         enemyInLine = false;
         cooldownCounter = 4;
+        
+        if (shells && *shells > 0) {
+            --(*shells);
+            cooldownCounter = 4;
+            return ActionRequest::Shoot;
+        }
+        else return ActionRequest::DoNothing;
+        
         return ActionRequest::Shoot;
     }
 
@@ -58,6 +66,7 @@ void MyTankAlgorithm2::updateBattleInfo(BattleInfo& info) {
     enemyInLine = false;
     rotateAction.reset();
 
+    initShellsFromInfo(info);
     const auto* myInfo = dynamic_cast<const MyBattleInfo*>(&info);
     if (!myInfo) return;
 

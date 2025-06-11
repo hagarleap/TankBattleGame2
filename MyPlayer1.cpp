@@ -12,6 +12,7 @@ MyPlayer1::MyPlayer1(int player_index, size_t width, size_t height, size_t max_s
 void MyPlayer1::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& satellite_view) {
     const GameSatelliteView* gview = dynamic_cast<const GameSatelliteView*>(&satellite_view);
     MyBattleInfo info(boardWidth, boardHeight, gview);
+    info.setInitialShells(numShells);
 
     std::pair<int, int> self{-1, -1};
     std::vector<std::pair<int, int>> enemies;
