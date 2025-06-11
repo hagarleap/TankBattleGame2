@@ -17,8 +17,14 @@ ActionRequest MyTankAlgorithm1::getAction() {
         ActionRequest next = plannedActions.front();
         plannedActions.pop();
 
-        if (next == ActionRequest::Shoot)
-            cooldownCounter = 4;
+        if (next == ActionRequest::Shoot){
+            if (shells && *shells > 0) {
+                --(*shells);
+                cooldownCounter = 4;
+            }
+            else next = ActionRequest::DoNothing;
+        }
+            
 
         if (next == ActionRequest::RotateRight90) dir = rotateR4(dir);
         else if (next == ActionRequest::RotateLeft90) dir = rotateL4(dir);
@@ -31,6 +37,7 @@ ActionRequest MyTankAlgorithm1::getAction() {
 }
 
 void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
+    initShellsFromInfo(info);
     const MyBattleInfo* myInfo = dynamic_cast<const MyBattleInfo*>(&info);
     if (!myInfo) return;
 

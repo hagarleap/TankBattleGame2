@@ -14,6 +14,7 @@ class MyBattleInfo : public BattleInfo {
     std::optional<std::pair<int, int>> enemyTarget;
     std::optional<std::pair<int, int>> selfPosition; // Self position
     bool shootHint = false;
+    int initialShells;
 
 public:
     MyBattleInfo(size_t width, size_t height, const SatelliteView* view);
@@ -27,6 +28,11 @@ public:
 
     void setEnemy(std::pair<int, int> pos);
     std::optional<std::pair<int, int>> getEnemy() const;
+
+    void setInitialShells(int shells);
+    int getRemainingShells() const;
+
+
 
     void setShootFlag(bool val);
     bool shouldShoot() const;
