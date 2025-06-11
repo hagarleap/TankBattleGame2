@@ -19,4 +19,7 @@ protected:
 
     std::pair<int, int> findClosestEnemy(std::pair<int, int> from,
                                          const std::vector<std::pair<int, int>>& enemies) const;
+                                         
+    static int toroidalDist(int a, int b, int max);
+ 
 };

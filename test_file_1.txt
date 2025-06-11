@@ -1,8 +1,8 @@
 1-Small battlefield
-MaxSteps = 10
+MaxSteps = 100
 NumShells=20
-Rows = 4
-Cols =10
-#### @ @ 
-# 1    @ 
-#      2
+Rows = 5
+Cols =16
+################
+   1  2   2
+################

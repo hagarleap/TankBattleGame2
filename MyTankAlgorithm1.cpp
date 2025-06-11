@@ -11,8 +11,14 @@ MyTankAlgorithm1::MyTankAlgorithm1() {}
 
 ActionRequest MyTankAlgorithm1::getAction() {
     if (!plannedActions.empty()) {
+        if (cooldownCounter > 0)
+            cooldownCounter--;
+
         ActionRequest next = plannedActions.front();
         plannedActions.pop();
+
+        if (next == ActionRequest::Shoot)
+            cooldownCounter = 4;
 
         if (next == ActionRequest::RotateRight90) dir = rotateR4(dir);
         else if (next == ActionRequest::RotateLeft90) dir = rotateL4(dir);
@@ -90,16 +96,14 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
             case Direction::UL: dx = -1; dy = -1; break;
             default: break;
         }
-        int nx = node.x + dx;
-        int ny = node.y + dy;
-        if (nx >= 0 && nx < (int)width && ny >= 0 && ny < (int)height) {
-            char obj = view->getObjectAt(nx, ny);
-            if (obj != '#' && obj != '@') {
-                if (!visited.count(std::make_tuple(nx, ny, static_cast<int>(node.dir)))) {
-                    auto newPath = node.path; newPath.push_back(ActionRequest::MoveForward);
-                    q.push({nx, ny, node.dist + 1, newPath, node.dir});
-                    visited.insert(std::make_tuple(nx, ny, static_cast<int>(node.dir)));
-                }
+        int nx = wrap(node.x + dx, (int)width);
+        int ny = wrap(node.y + dy, (int)height);
+        char obj = view->getObjectAt(nx, ny);
+        if (obj != '#' && obj != '@') {
+            if (!visited.count(std::make_tuple(nx, ny, static_cast<int>(node.dir)))) {
+                auto newPath = node.path; newPath.push_back(ActionRequest::MoveForward);
+                q.push({nx, ny, node.dist + 1, newPath, node.dir});
+                visited.insert(std::make_tuple(nx, ny, static_cast<int>(node.dir)));
             }
         }
 
@@ -134,26 +138,55 @@ void MyTankAlgorithm1::updateBattleInfo(BattleInfo& info) {
 void MyTankAlgorithm1::aimAndShoot(int ex, int ey, int myX, int myY) {
     Direction desiredDir = computeDirection(ex - myX, ey - myY);
     Direction current = dir;
+    int futureCooldown = cooldownCounter;
 
     for (int i = 0; i < 3; ++i) {
         ActionRequest rot = rotateToward(current, desiredDir);
+
         if (rot == ActionRequest::DoNothing) {
-            plannedActions.push(ActionRequest::Shoot);
-            // Fill remaining steps with DoNothing
-            while (++i < 3)
+            if (futureCooldown == 0) {
+                plannedActions.push(ActionRequest::Shoot);
+            } else {
                 plannedActions.push(ActionRequest::DoNothing);
-            return;
+            }
+        } else {
+            plannedActions.push(rot);
+            switch (rot) {
+                case ActionRequest::RotateRight45: current = rotateR8(current); break;
+                case ActionRequest::RotateLeft45:  current = rotateL8(current); break;
+                case ActionRequest::RotateRight90: current = rotateR4(current); break;
+                case ActionRequest::RotateLeft90:  current = rotateL4(current); break;
+                default: break;
+            }
         }
 
-        // Apply the rotation
-        plannedActions.push(rot);
-        // Update simulated direction
-        switch (rot) {
-            case ActionRequest::RotateRight45: current = rotateR8(current); break;
-            case ActionRequest::RotateLeft45:  current = rotateL8(current); break;
-            case ActionRequest::RotateRight90: current = rotateR4(current); break;
-            case ActionRequest::RotateLeft90:  current = rotateL4(current); break;
-            default: break;
+        futureCooldown = std::max(0, futureCooldown - 1);
+    }
+
+    // Final cleanup: if the last planned action is SHOOT but cooldownCounter != 0, replace it
+    std::queue<ActionRequest> fixed;
+    std::vector<ActionRequest> temp;
+
+    while (!plannedActions.empty()) {
+        temp.push_back(plannedActions.front());
+        plannedActions.pop();
+    }
+
+    int simCooldown = cooldownCounter;
+    for (size_t i = 0; i < temp.size(); ++i) {
+        ActionRequest act = temp[i];
+        if (act == ActionRequest::Shoot && simCooldown > 0) {
+            fixed.push(ActionRequest::DoNothing);
+        } else {
+            fixed.push(act);
         }
+
+        if (act != ActionRequest::GetBattleInfo)
+            simCooldown = std::max(0, simCooldown - 1);
+
+        if (act == ActionRequest::Shoot)
+            simCooldown = 4;
     }
-    }
+
+    plannedActions = fixed;
+}

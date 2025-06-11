@@ -14,4 +14,5 @@ private:
     Direction dir = Direction::R; 
     bool enemyInLine = false;
     std::optional<ActionRequest> rotateAction;
+    int idleCounter = 0;
 };

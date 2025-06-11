@@ -6,6 +6,8 @@
 class BaseTankAlgorithm : public TankAlgorithm {
 protected:
     Direction dir = Direction::L; // or R, initialize in concrete class
+    int cooldownCounter = 0;
+
 
     Direction computeDirection(int dx, int dy) const {
         if (dx == 0 && dy < 0) return Direction::U;
@@ -31,17 +33,28 @@ protected:
         return std::nullopt;                   // Not on a shooting ray
     }
 
-    ActionRequest rotateToward(Direction current, Direction target) const {
-        int cur = static_cast<int>(current);
-        int tgt = static_cast<int>(target);
-        int diff = (tgt - cur + 8) % 8;
-        if (diff == 0) return ActionRequest::DoNothing;
-        if (diff == 1 || diff == 2) return ActionRequest::RotateRight45;
-        if (diff == 7 || diff == 6) return ActionRequest::RotateLeft45;
-        return (diff <= 4) ? ActionRequest::RotateRight90 : ActionRequest::RotateLeft90;
+    ActionRequest rotateToward(Direction from, Direction to) const {
+            int fromIdx = static_cast<int>(from);
+            int toIdx = static_cast<int>(to);
+            int diff = (toIdx - fromIdx + 8) % 8; // rotate clockwise difference
+
+            if (diff == 0) return ActionRequest::DoNothing;
+            if (diff == 1) return ActionRequest::RotateRight45;
+            if (diff == 2) return ActionRequest::RotateRight90;
+            if (diff == 3) return ActionRequest::RotateLeft45;  // shorter than 5 right
+            if (diff == 4) return ActionRequest::RotateRight90; // or left90, arbitrary
+            if (diff == 5) return ActionRequest::RotateRight45; // back to 3
+            if (diff == 6) return ActionRequest::RotateLeft90;
+            if (diff == 7) return ActionRequest::RotateLeft45;
+
+            return ActionRequest::DoNothing; // fallback
     }
 
     int directionDelta(Direction from, Direction to) const {
         return (static_cast<int>(to) - static_cast<int>(from) + 8) % 8;
     }
+
+    inline int wrap(int val, int max) {
+        return (val + max) % max;
+}
 };

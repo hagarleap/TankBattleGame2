@@ -12,21 +12,27 @@
 MyTankAlgorithm2::MyTankAlgorithm2() {}
 
 ActionRequest MyTankAlgorithm2::getAction() {
+    if (cooldownCounter > 0)
+        cooldownCounter--;
+
     if (enemyInLine) {
+        enemyInLine = false;
+        cooldownCounter = 4;
         return ActionRequest::Shoot;
     }
-    // If we need to rotate, do so
+
     if (rotateAction.has_value()) {
         ActionRequest act = rotateAction.value();
-        
+
         if (act == ActionRequest::RotateRight90) dir = rotateR4(dir);
         else if (act == ActionRequest::RotateLeft90) dir = rotateL4(dir);
         else if (act == ActionRequest::RotateRight45) dir = rotateR8(dir);
         else if (act == ActionRequest::RotateLeft45) dir = rotateL8(dir);
-        
+
         rotateAction.reset();
         return act;
     }
+
     return ActionRequest::GetBattleInfo;
 }
 
@@ -57,19 +63,55 @@ void MyTankAlgorithm2::updateBattleInfo(BattleInfo& info) {
     std::vector<Target> viable;
 
     for (auto [ex, ey] : enemies) {
-        int dx = ex - myX,  dy = ey - myY;
-        std::optional<Direction> rayOpt = computeDirection(dx, dy);  // strict version
-        if (!rayOpt) continue;                              // not on a firing ray
+        int dxRaw = ex - myX;
+        int dyRaw = ey - myY;
 
-        int steps = std::max(std::abs(dx), std::abs(dy));
+        int w = (int)myInfo->getBoardWidth();
+        int h = (int)myInfo->getBoardHeight();
+
+        int dx = (std::abs(dxRaw) <= w / 2) ? dxRaw : (dxRaw > 0 ? dxRaw - w : dxRaw + w);
+        int dy = (std::abs(dyRaw) <= h / 2) ? dyRaw : (dyRaw > 0 ? dyRaw - h : dyRaw + h);
+
+        std::optional<Direction> rayOpt = computeDirection(dx, dy);  // strict direction
+        if (!rayOpt) continue;
+
+        Direction ray = *rayOpt;
+        int tx = myX, ty = myY;
         bool blocked = false;
-        for (int s = 1; s < steps && !blocked; ++s) {
-            int tx = myX + (dx == 0 ? 0 : (dx > 0 ?  s : -s));
-            int ty = myY + (dy == 0 ? 0 : (dy > 0 ?  s : -s));
-            if (view->getObjectAt(tx, ty) == '2') blocked = true;   // friendly in path
+        int steps = 0;
+
+        while (true) {
+            // Step in direction
+            switch (ray) {
+                case Direction::U:  ty -= 1; break;
+                case Direction::UR: tx += 1; ty -= 1; break;
+                case Direction::R:  tx += 1; break;
+                case Direction::DR: tx += 1; ty += 1; break;
+                case Direction::D:  ty += 1; break;
+                case Direction::DL: tx -= 1; ty += 1; break;
+                case Direction::L:  tx -= 1; break;
+                case Direction::UL: tx -= 1; ty -= 1; break;
+                default: break;
+            }
+
+            // Wraparound
+            tx = wrap(tx, (int)myInfo->getBoardWidth());
+            ty = wrap(ty, (int)myInfo->getBoardHeight());
+            steps++;
+
+            if (tx == ex && ty == ey) break;  // reached target
+
+            char obj = view->getObjectAt(tx, ty);
+            if (obj == '2') {
+                blocked = true;
+                break;
+            }
         }
-        if (!blocked) viable.push_back({ex, ey, steps, *rayOpt});
+
+        if (!blocked)
+            viable.push_back({ex, ey, steps, ray});
     }
+
 
     std::cout << "[TankAlgo2] viable targets: " << viable.size() << ", total enemies: " << enemies.size() << "\n";
 
@@ -82,9 +124,13 @@ void MyTankAlgorithm2::updateBattleInfo(BattleInfo& info) {
 
         ActionRequest rot = rotateToward(dir, tgt.ray);
         if (rot == ActionRequest::DoNothing) {
-            enemyInLine = true;      // next getAction() will Shoot
+            if (cooldownCounter == 0) {
+                enemyInLine = true;  // next getAction() will Shoot
+            } else {
+                std::cout << "[TankAlgo2] Facing enemy but cooldown = " << cooldownCounter << ", waiting\n";
+            }
         } else {
-            rotateAction = rot;      // schedule one-step turn
+            rotateAction = rot;
             std::cout << to_string(rot) << std::endl;
         }
         return;

@@ -1,11 +1,12 @@
-Get Battle Info, Get Battle Info
-Rotate Right 90 degrees, Rotate Left 90 degrees
-Rotate Right 90 degrees, Get Battle Info
-Move Forward, Rotate Left 45 degrees
-Get Battle Info, Get Battle Info
-Move Forward, Shoot
-Move Forward, Shoot
-Move Forward, Shoot
-Get Battle Info, Shoot
-Rotate Right 45 degrees, Shoot
-Player 2 won with 1 tanks still alive
+Get Battle Info, Get Battle Info, Get Battle Info
+Rotate Right 90 degrees, Rotate Right 90 degrees, Rotate Right 90 degrees
+Rotate Right 90 degrees, Get Battle Info, Get Battle Info
+Move Forward, Rotate Right 90 degrees, Rotate Right 90 degrees
+Get Battle Info, Get Battle Info, Get Battle Info
+Shoot, Shoot, Get Battle Info
+None, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+Get Battle Info, Get Battle Info, Get Battle Info
+None, Get Battle Info, Get Battle Info
+None, Shoot, Get Battle Info
+Player 2 won with 2 tanks still alive

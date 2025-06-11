@@ -14,10 +14,8 @@ public:
                                    size_t num_shells) const override {
         switch(player_index) {
             case 1:
-                std::cout << "Making Player 1" << std::endl;
                 return std::make_unique<MyPlayer1>(player_index, x, y, max_steps, num_shells);
             case 2:
-                std::cout << "Making Player 2" << std::endl;
                 return std::make_unique<MyPlayer2>(player_index, x, y, max_steps, num_shells);
             default:
                 throw std::invalid_argument("Invalid player_index in PlayerFactory::create");

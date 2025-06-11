@@ -38,10 +38,10 @@ void MyPlayer1::updateTankWithBattleInfo(TankAlgorithm& tank, SatelliteView& sat
     auto target = findClosestEnemy(self, enemies);
     info.setEnemy(target);
 
-    int dx = std::abs(target.first - self.first);
-    int dy = std::abs(target.second - self.second);
+    int dx = toroidalDist(target.first, self.first, boardWidth);
+    int dy = toroidalDist(target.second, self.second, boardHeight);
     if (dx <= 2 && dy <= 2){
-        std::cout << "Target is close enough, setting shoot flag\n";
+        std::cout << "Target is close enough (dx=" << dx << ", dy=" << dy << "), setting shoot flag\n";
         info.setShootFlag(true);
     }
         
@@ -54,7 +54,9 @@ std::pair<int, int> MyPlayer1::findClosestEnemy(std::pair<int, int> from,
     int minDist = 1e9;
     std::pair<int, int> closest = enemies.front();
     for (const auto& e : enemies) {
-        int dist = std::abs(from.first - e.first) + std::abs(from.second - e.second);
+        int dx = toroidalDist(from.first, e.first, boardWidth);
+        int dy = toroidalDist(from.second, e.second, boardHeight);
+        int dist = dx + dy;  // Manhattan distance with wraparound
         if (dist < minDist) {
             minDist = dist;
             closest = e;
@@ -62,3 +64,9 @@ std::pair<int, int> MyPlayer1::findClosestEnemy(std::pair<int, int> from,
     }
     return closest;
 }
+
+int MyPlayer1::toroidalDist(int a, int b, int max) {
+    int direct = std::abs(a - b);
+    return std::min(direct, max - direct);
+}
+
